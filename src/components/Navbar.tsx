@@ -1,15 +1,17 @@
 import { motion } from "framer-motion";
-import { PawPrint, Users, MessageCircle, Heart, Menu, X, Sparkles } from "lucide-react";
+import { PawPrint, Users, MessageCircle, Heart, Menu, X, Sparkles, MessageSquarePlus } from "lucide-react";
 import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const location = useLocation();
 
   const navLinks = [
-    { name: "Community", icon: Users, href: "#community" },
-    { name: "Discussions", icon: MessageCircle, href: "#discussions" },
-    { name: "Pet Spotlights", icon: Heart, href: "#spotlights" },
+    { name: "Community", icon: Users, href: "/#community" },
+    { name: "Forum", icon: MessageSquarePlus, href: "/forum" },
+    { name: "Pet Spotlights", icon: Heart, href: "/#spotlights" },
   ];
 
   return (
@@ -22,35 +24,51 @@ const Navbar = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <motion.a
-            href="#"
-            className="flex items-center gap-2 group"
+          <motion.div
             whileHover={{ scale: 1.02 }}
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-hero flex items-center justify-center shadow-glow">
-              <PawPrint className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-display font-bold text-foreground">
-              Paw<span className="text-gradient">Square</span>
-            </span>
-          </motion.a>
+            <Link to="/" className="flex items-center gap-2 group">
+              <div className="w-10 h-10 rounded-xl bg-gradient-hero flex items-center justify-center shadow-glow">
+                <PawPrint className="w-5 h-5 text-primary-foreground" />
+              </div>
+              <span className="text-xl font-display font-bold text-foreground">
+                Paw<span className="text-gradient">Square</span>
+              </span>
+            </Link>
+          </motion.div>
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-8">
-            {navLinks.map((link, index) => (
-              <motion.a
-                key={link.name}
-                href={link.href}
-                className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors font-medium"
-                whileHover={{ y: -2 }}
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <link.icon className="w-4 h-4" />
-                {link.name}
-              </motion.a>
-            ))}
+            {navLinks.map((link, index) => {
+              const isActive = link.href === "/forum" 
+                ? location.pathname === "/forum"
+                : location.pathname === "/" && link.href.startsWith("/#");
+              
+              const LinkComponent = link.href.startsWith("/") && !link.href.includes("#") ? Link : "a";
+              const linkProps = link.href.startsWith("/") && !link.href.includes("#")
+                ? { to: link.href }
+                : { href: link.href };
+
+              return (
+                <motion.div
+                  key={link.name}
+                  whileHover={{ y: -2 }}
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <LinkComponent
+                    {...linkProps as any}
+                    className={`flex items-center gap-2 transition-colors font-medium ${
+                      isActive ? "text-primary" : "text-muted-foreground hover:text-primary"
+                    }`}
+                  >
+                    <link.icon className="w-4 h-4" />
+                    {link.name}
+                  </LinkComponent>
+                </motion.div>
+              );
+            })}
           </div>
 
           {/* CTA Buttons */}
@@ -82,16 +100,24 @@ const Navbar = () => {
             className="md:hidden py-4 border-t border-border"
           >
             <div className="flex flex-col gap-4">
-              {navLinks.map((link) => (
-                <a
-                  key={link.name}
-                  href={link.href}
-                  className="flex items-center gap-3 px-4 py-2 text-muted-foreground hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
-                >
-                  <link.icon className="w-5 h-5" />
-                  {link.name}
-                </a>
-              ))}
+              {navLinks.map((link) => {
+                const LinkComponent = link.href.startsWith("/") && !link.href.includes("#") ? Link : "a";
+                const linkProps = link.href.startsWith("/") && !link.href.includes("#")
+                  ? { to: link.href }
+                  : { href: link.href };
+
+                return (
+                  <LinkComponent
+                    key={link.name}
+                    {...linkProps as any}
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center gap-3 px-4 py-2 text-muted-foreground hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
+                  >
+                    <link.icon className="w-5 h-5" />
+                    {link.name}
+                  </LinkComponent>
+                );
+              })}
               <div className="flex flex-col gap-2 px-4 pt-4 border-t border-border">
                 <Button variant="ghost" className="w-full justify-center">
                   Sign In
