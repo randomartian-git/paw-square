@@ -1,4 +1,4 @@
-import { motion, useInView } from "framer-motion";
+import { motion, useScroll, useTransform, useInView } from "framer-motion";
 import { Heart, MapPin, Star } from "lucide-react";
 import { useState, useRef } from "react";
 
@@ -65,17 +65,34 @@ const pets: Pet[] = [
 ];
 
 const PetCard = ({ pet, onLike, index }: { pet: Pet; onLike: (id: number) => void; index: number }) => {
+  const cardRef = useRef(null);
+  const isInView = useInView(cardRef, { once: true, margin: "-50px" });
+  
+  // Different entrance directions based on position
+  const directions = [
+    { x: -60, y: 40 },
+    { x: 60, y: 30 },
+    { x: -40, y: 50 },
+    { x: 40, y: 60 },
+  ];
+  const dir = directions[index % 4];
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-50px" }}
-      transition={{ duration: 0.5, delay: index * 0.1 }}
-      whileHover={{ y: -12 }}
-      className="group relative bg-card rounded-2xl overflow-hidden shadow-soft hover:shadow-elevated transition-all"
+      ref={cardRef}
+      initial={{ opacity: 0, x: dir.x, y: dir.y, rotate: index % 2 === 0 ? -5 : 5 }}
+      animate={isInView ? { opacity: 1, x: 0, y: 0, rotate: 0 } : {}}
+      transition={{ duration: 0.7, delay: index * 0.12, type: "spring", stiffness: 80 }}
+      whileHover={{ y: -15, scale: 1.03, rotate: 0 }}
+      className="group relative bg-card/80 backdrop-blur-sm rounded-2xl overflow-hidden shadow-soft hover:shadow-elevated transition-all"
     >
       {/* Animated border gradient */}
-      <div className={`absolute inset-0 bg-gradient-to-r ${pet.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl`} />
+      <motion.div 
+        className={`absolute inset-0 bg-gradient-to-r ${pet.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl`}
+        animate={{ backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }}
+        transition={{ duration: 3, repeat: Infinity }}
+        style={{ backgroundSize: "200% 200%" }}
+      />
       <div className="absolute inset-[2px] bg-card rounded-2xl" />
       
       {/* Image */}
@@ -84,19 +101,20 @@ const PetCard = ({ pet, onLike, index }: { pet: Pet; onLike: (id: number) => voi
           src={pet.image}
           alt={pet.name}
           className="w-full h-full object-cover"
-          whileHover={{ scale: 1.1 }}
+          whileHover={{ scale: 1.15 }}
           transition={{ duration: 0.6 }}
         />
         
         {/* Gradient overlay */}
-        <div className={`absolute inset-0 bg-gradient-to-t from-foreground/90 via-foreground/30 to-transparent`} />
+        <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/40 to-transparent" />
         
         {/* Badge */}
         {pet.badge && (
           <motion.div 
             initial={{ x: -20, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
-            className="absolute top-4 left-4 px-3 py-1 rounded-full bg-background/90 backdrop-blur-sm text-sm font-medium border border-border"
+            transition={{ delay: 0.3 }}
+            className="absolute top-4 left-4 px-3 py-1 rounded-full bg-card/90 backdrop-blur-sm text-sm font-medium border border-border"
           >
             {pet.badge}
           </motion.div>
@@ -104,28 +122,28 @@ const PetCard = ({ pet, onLike, index }: { pet: Pet; onLike: (id: number) => voi
 
         {/* Like button */}
         <motion.button
-          whileTap={{ scale: 0.85 }}
-          whileHover={{ scale: 1.15 }}
+          whileTap={{ scale: 0.8 }}
+          whileHover={{ scale: 1.2 }}
           onClick={() => onLike(pet.id)}
           className={`absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-sm transition-all ${
             pet.isLiked
               ? "bg-accent text-accent-foreground shadow-glow-accent"
-              : "bg-background/80 text-foreground hover:bg-accent hover:text-accent-foreground"
+              : "bg-card/80 text-foreground hover:bg-accent hover:text-accent-foreground"
           }`}
         >
           <Heart className={`w-5 h-5 ${pet.isLiked ? "fill-current" : ""}`} />
         </motion.button>
 
         {/* Pet Info */}
-        <div className="absolute bottom-0 left-0 right-0 p-5 text-primary-foreground">
+        <div className="absolute bottom-0 left-0 right-0 p-5 text-foreground">
           <h3 className="text-xl font-display font-bold mb-1">{pet.name}</h3>
-          <p className="text-primary-foreground/80 text-sm mb-2">{pet.breed} • {pet.age}</p>
+          <p className="text-foreground/70 text-sm mb-2">{pet.breed} • {pet.age}</p>
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1 text-sm text-primary-foreground/70">
+            <div className="flex items-center gap-1 text-sm text-foreground/60">
               <MapPin className="w-3 h-3" />
               {pet.location}
             </div>
-            <div className="flex items-center gap-1 text-sm">
+            <div className="flex items-center gap-1 text-sm text-foreground/70">
               <Heart className="w-3 h-3" />
               {pet.likes.toLocaleString()}
             </div>
@@ -138,8 +156,18 @@ const PetCard = ({ pet, onLike, index }: { pet: Pet; onLike: (id: number) => voi
 
 const PetSpotlights = () => {
   const [petList, setPetList] = useState(pets);
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: "-100px" });
+  const containerRef = useRef(null);
+  const isInView = useInView(containerRef, { once: true, margin: "-100px" });
+  
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start end", "end start"]
+  });
+
+  const y1 = useTransform(scrollYProgress, [0, 1], [100, -100]);
+  const y2 = useTransform(scrollYProgress, [0, 1], [-80, 80]);
+  const x1 = useTransform(scrollYProgress, [0, 1], [-60, 60]);
+  const rotate = useTransform(scrollYProgress, [0, 1], [-10, 10]);
 
   const handleLike = (id: number) => {
     setPetList((prev) =>
@@ -156,22 +184,37 @@ const PetSpotlights = () => {
   };
 
   return (
-    <section id="spotlights" className="py-20 relative overflow-hidden">
-      {/* Background decorations */}
-      <div className="absolute top-0 left-1/4 w-72 h-72 bg-primary/5 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 right-1/4 w-72 h-72 bg-quaternary/5 rounded-full blur-3xl" />
+    <section id="spotlights" className="py-20 relative overflow-hidden" ref={containerRef}>
+      {/* Animated background decorations */}
+      <motion.div 
+        className="absolute top-0 left-1/4 w-80 h-80 bg-primary/10 rounded-full blur-3xl"
+        style={{ y: y1, rotate }}
+      />
+      <motion.div 
+        className="absolute bottom-0 right-1/4 w-80 h-80 bg-quaternary/10 rounded-full blur-3xl"
+        style={{ y: y2, x: x1 }}
+      />
+      <motion.div 
+        className="absolute top-1/2 right-10 w-48 h-48 bg-accent/8 rounded-full blur-3xl"
+        style={{ y: y1 }}
+      />
       
-      <div className="container mx-auto px-4 relative z-10" ref={ref}>
+      <div className="container mx-auto px-4 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
           className="text-center mb-12"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-quaternary/20 to-accent/20 text-foreground text-sm font-medium mb-4 border border-quaternary/30">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={isInView ? { opacity: 1, scale: 1 } : {}}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-quaternary/20 to-accent/20 text-foreground text-sm font-medium mb-4 border border-quaternary/30"
+          >
             <Star className="w-4 h-4 text-quaternary" />
             Pet Spotlights
-          </div>
+          </motion.div>
           <h2 className="text-3xl sm:text-4xl font-display font-bold text-foreground mb-4">
             Meet Our <span className="text-gradient-warm">Furry Stars</span>
           </h2>

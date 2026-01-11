@@ -1,4 +1,4 @@
-import { motion, useInView } from "framer-motion";
+import { motion, useScroll, useTransform, useInView } from "framer-motion";
 import { Users, MessageSquare, Calendar, MapPin, Heart, Shield } from "lucide-react";
 import { useRef } from "react";
 
@@ -48,16 +48,37 @@ const features = [
 ];
 
 const Features = () => {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: "-100px" });
+  const containerRef = useRef(null);
+  const isInView = useInView(containerRef, { once: true, margin: "-100px" });
+  
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start end", "end start"]
+  });
+
+  const y1 = useTransform(scrollYProgress, [0, 1], [100, -100]);
+  const y2 = useTransform(scrollYProgress, [0, 1], [50, -150]);
+  const x1 = useTransform(scrollYProgress, [0, 1], [-50, 50]);
+  const x2 = useTransform(scrollYProgress, [0, 1], [50, -50]);
+  const rotate = useTransform(scrollYProgress, [0, 1], [0, 45]);
 
   return (
-    <section id="discussions" className="py-20 bg-muted/30 relative overflow-hidden">
-      {/* Background decorations */}
-      <div className="absolute top-0 left-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-accent/5 rounded-full blur-3xl" />
+    <section id="discussions" className="py-20 relative overflow-hidden" ref={containerRef}>
+      {/* Animated background orbs */}
+      <motion.div 
+        className="absolute top-0 left-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl"
+        style={{ y: y1, x: x1 }}
+      />
+      <motion.div 
+        className="absolute bottom-0 right-0 w-96 h-96 bg-accent/10 rounded-full blur-3xl"
+        style={{ y: y2, x: x2 }}
+      />
+      <motion.div 
+        className="absolute top-1/2 left-1/2 w-64 h-64 bg-tertiary/5 rounded-full blur-3xl"
+        style={{ y: y1, rotate }}
+      />
       
-      <div className="container mx-auto px-4 relative z-10" ref={ref}>
+      <div className="container mx-auto px-4 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -74,33 +95,44 @@ const Features = () => {
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((feature, index) => (
-            <motion.div
-              key={feature.title}
-              initial={{ opacity: 0, y: 30 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ delay: index * 0.1, duration: 0.5 }}
-              whileHover={{ y: -8, scale: 1.02 }}
-              className={`${feature.bgGlow} bg-card p-6 rounded-2xl shadow-soft hover:shadow-elevated transition-all border border-border group relative overflow-hidden`}
-            >
-              {/* Gradient accent line */}
-              <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${feature.gradient} opacity-0 group-hover:opacity-100 transition-opacity`} />
-              
+          {features.map((feature, index) => {
+            // Alternate directions for cards
+            const isEven = index % 2 === 0;
+            const cardY = isEven ? y1 : y2;
+            const cardX = index % 3 === 0 ? x1 : index % 3 === 1 ? undefined : x2;
+            
+            return (
               <motion.div
-                whileHover={{ rotate: [0, -10, 10, 0], scale: 1.1 }}
-                transition={{ duration: 0.5 }}
-                className={`w-14 h-14 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-5 shadow-lg`}
+                key={feature.title}
+                initial={{ opacity: 0, y: 50, x: isEven ? -30 : 30 }}
+                animate={isInView ? { opacity: 1, y: 0, x: 0 } : {}}
+                transition={{ delay: index * 0.1, duration: 0.6, type: "spring" }}
+                whileHover={{ y: -10, scale: 1.02 }}
+                style={{ y: cardY, x: cardX }}
+                className={`${feature.bgGlow} bg-card/80 backdrop-blur-sm p-6 rounded-2xl shadow-soft hover:shadow-elevated transition-all border border-border group relative overflow-hidden`}
               >
-                <feature.icon className="w-7 h-7 text-white" />
+                {/* Gradient accent line */}
+                <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${feature.gradient} opacity-0 group-hover:opacity-100 transition-opacity`} />
+                
+                {/* Glow effect on hover */}
+                <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-5 transition-opacity rounded-2xl`} />
+                
+                <motion.div
+                  whileHover={{ rotate: [0, -10, 10, 0], scale: 1.15 }}
+                  transition={{ duration: 0.5 }}
+                  className={`w-14 h-14 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-5 shadow-lg relative z-10`}
+                >
+                  <feature.icon className="w-7 h-7 text-white" />
+                </motion.div>
+                <h3 className="text-xl font-display font-bold text-foreground mb-2 relative z-10">
+                  {feature.title}
+                </h3>
+                <p className="text-muted-foreground leading-relaxed relative z-10">
+                  {feature.description}
+                </p>
               </motion.div>
-              <h3 className="text-xl font-display font-bold text-foreground mb-2">
-                {feature.title}
-              </h3>
-              <p className="text-muted-foreground leading-relaxed">
-                {feature.description}
-              </p>
-            </motion.div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>
