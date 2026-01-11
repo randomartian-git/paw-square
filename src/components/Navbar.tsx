@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { PawPrint, Users, MessageCircle, Heart, Menu, X } from "lucide-react";
+import { PawPrint, Users, MessageCircle, Heart, Menu, X, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -37,12 +37,15 @@ const Navbar = () => {
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-8">
-            {navLinks.map((link) => (
+            {navLinks.map((link, index) => (
               <motion.a
                 key={link.name}
                 href={link.href}
-                className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors font-medium"
+                className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors font-medium"
                 whileHover={{ y: -2 }}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
               >
                 <link.icon className="w-4 h-4" />
                 {link.name}
@@ -52,10 +55,11 @@ const Navbar = () => {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            <Button variant="ghost" className="font-semibold">
+            <Button variant="ghost" className="font-semibold hover:text-primary">
               Sign In
             </Button>
             <Button className="bg-gradient-hero font-semibold shadow-glow hover:shadow-elevated transition-shadow">
+              <Sparkles className="w-4 h-4 mr-2" />
               Join the Pack
             </Button>
           </div>
@@ -82,7 +86,7 @@ const Navbar = () => {
                 <a
                   key={link.name}
                   href={link.href}
-                  className="flex items-center gap-3 px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+                  className="flex items-center gap-3 px-4 py-2 text-muted-foreground hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
                 >
                   <link.icon className="w-5 h-5" />
                   {link.name}
@@ -93,6 +97,7 @@ const Navbar = () => {
                   Sign In
                 </Button>
                 <Button className="w-full bg-gradient-hero shadow-glow">
+                  <Sparkles className="w-4 h-4 mr-2" />
                   Join the Pack
                 </Button>
               </div>
