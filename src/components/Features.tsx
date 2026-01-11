@@ -56,26 +56,38 @@ const Features = () => {
     offset: ["start end", "end start"]
   });
 
-  const y1 = useTransform(scrollYProgress, [0, 1], [100, -100]);
-  const y2 = useTransform(scrollYProgress, [0, 1], [50, -150]);
-  const x1 = useTransform(scrollYProgress, [0, 1], [-50, 50]);
-  const x2 = useTransform(scrollYProgress, [0, 1], [50, -50]);
-  const rotate = useTransform(scrollYProgress, [0, 1], [0, 45]);
+  // Enhanced multi-directional parallax
+  const y1 = useTransform(scrollYProgress, [0, 1], [150, -150]);
+  const y2 = useTransform(scrollYProgress, [0, 1], [-100, 200]);
+  const y3 = useTransform(scrollYProgress, [0, 1], [80, -120]);
+  const x1 = useTransform(scrollYProgress, [0, 1], [-100, 100]);
+  const x2 = useTransform(scrollYProgress, [0, 1], [120, -80]);
+  const x3 = useTransform(scrollYProgress, [0, 1], [-60, 60]);
+  const rotate1 = useTransform(scrollYProgress, [0, 1], [0, 90]);
+  const rotate2 = useTransform(scrollYProgress, [0, 1], [0, -60]);
 
   return (
     <section id="discussions" className="py-20 relative overflow-hidden" ref={containerRef}>
-      {/* Animated background orbs */}
+      {/* Enhanced animated background orbs with multi-directional movement */}
       <motion.div 
         className="absolute top-0 left-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl"
-        style={{ y: y1, x: x1 }}
+        style={{ y: y1, x: x1, rotate: rotate1 }}
       />
       <motion.div 
         className="absolute bottom-0 right-0 w-96 h-96 bg-accent/10 rounded-full blur-3xl"
-        style={{ y: y2, x: x2 }}
+        style={{ y: y2, x: x2, rotate: rotate2 }}
       />
       <motion.div 
         className="absolute top-1/2 left-1/2 w-64 h-64 bg-tertiary/5 rounded-full blur-3xl"
-        style={{ y: y1, rotate }}
+        style={{ y: y3, x: x3, rotate: rotate1 }}
+      />
+      <motion.div 
+        className="absolute top-1/4 right-1/4 w-48 h-48 bg-quaternary/8 rounded-full blur-3xl"
+        style={{ y: y1, x: x2 }}
+      />
+      <motion.div 
+        className="absolute bottom-1/4 left-1/3 w-56 h-56 bg-primary/5 rounded-full blur-3xl"
+        style={{ y: y2, x: x1, rotate: rotate2 }}
       />
       
       <div className="container mx-auto px-4 relative z-10">
@@ -96,19 +108,36 @@ const Features = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map((feature, index) => {
-            // Alternate directions for cards
-            const isEven = index % 2 === 0;
-            const cardY = isEven ? y1 : y2;
-            const cardX = index % 3 === 0 ? x1 : index % 3 === 1 ? undefined : x2;
+            // Multi-directional card movements
+            const directions = [
+              { y: y1, x: x1, rotate: rotate1 },
+              { y: y2, x: x2 },
+              { y: y3, x: x3, rotate: rotate2 },
+              { y: y1, x: x2 },
+              { y: y2, x: x1, rotate: rotate1 },
+              { y: y3, x: x2, rotate: rotate2 },
+            ];
+            const dir = directions[index % 6];
+            
+            // Different entrance directions
+            const entranceDirections = [
+              { x: -60, y: 40, rotate: -5 },
+              { x: 60, y: 30, rotate: 5 },
+              { x: 0, y: 70, rotate: 0 },
+              { x: -40, y: 50, rotate: -3 },
+              { x: 40, y: 60, rotate: 3 },
+              { x: 0, y: 80, rotate: 0 },
+            ];
+            const entrance = entranceDirections[index % 6];
             
             return (
               <motion.div
                 key={feature.title}
-                initial={{ opacity: 0, y: 50, x: isEven ? -30 : 30 }}
-                animate={isInView ? { opacity: 1, y: 0, x: 0 } : {}}
-                transition={{ delay: index * 0.1, duration: 0.6, type: "spring" }}
-                whileHover={{ y: -10, scale: 1.02 }}
-                style={{ y: cardY, x: cardX }}
+                initial={{ opacity: 0, y: entrance.y, x: entrance.x, rotate: entrance.rotate }}
+                animate={isInView ? { opacity: 1, y: 0, x: 0, rotate: 0 } : {}}
+                transition={{ delay: index * 0.1, duration: 0.7, type: "spring", stiffness: 80 }}
+                whileHover={{ y: -12, scale: 1.03, rotate: 0 }}
+                style={{ ...dir }}
                 className={`${feature.bgGlow} bg-card/80 backdrop-blur-sm p-6 rounded-2xl shadow-soft hover:shadow-elevated transition-all border border-border group relative overflow-hidden`}
               >
                 {/* Gradient accent line */}
