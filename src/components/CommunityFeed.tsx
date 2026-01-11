@@ -1,4 +1,4 @@
-import { motion, useInView } from "framer-motion";
+import { motion, useScroll, useTransform, useInView } from "framer-motion";
 import { Heart, MessageCircle, Share2, MoreHorizontal, PawPrint } from "lucide-react";
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
@@ -71,23 +71,28 @@ const initialPosts: Post[] = [
   },
 ];
 
-const accentStyles: Record<string, { ring: string; bg: string }> = {
-  primary: { ring: "ring-primary/30", bg: "bg-primary" },
-  accent: { ring: "ring-accent/30", bg: "bg-accent" },
-  tertiary: { ring: "ring-tertiary/30", bg: "bg-tertiary" },
+const accentStyles: Record<string, { ring: string; bg: string; glow: string }> = {
+  primary: { ring: "ring-primary/40", bg: "bg-primary", glow: "shadow-glow" },
+  accent: { ring: "ring-accent/40", bg: "bg-accent", glow: "shadow-glow-accent" },
+  tertiary: { ring: "ring-tertiary/40", bg: "bg-tertiary", glow: "shadow-glow-tertiary" },
 };
 
-const PostCard = ({ post, onLike }: { post: Post; onLike: (id: number) => void }) => {
+const PostCard = ({ post, onLike, index }: { post: Post; onLike: (id: number) => void; index: number }) => {
   const accent = accentStyles[post.accentColor] || accentStyles.primary;
+  const cardRef = useRef(null);
+  const isInView = useInView(cardRef, { once: true, margin: "-50px" });
+  
+  // Alternate entrance directions
+  const isEven = index % 2 === 0;
   
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-50px" }}
-      transition={{ duration: 0.5 }}
-      whileHover={{ scale: 1.01 }}
-      className="bg-card rounded-2xl shadow-soft border border-border overflow-hidden hover:shadow-elevated transition-all"
+      ref={cardRef}
+      initial={{ opacity: 0, x: isEven ? -50 : 50, y: 30 }}
+      animate={isInView ? { opacity: 1, x: 0, y: 0 } : {}}
+      transition={{ duration: 0.6, delay: index * 0.15, type: "spring", stiffness: 100 }}
+      whileHover={{ scale: 1.02, y: -5 }}
+      className={`bg-card/80 backdrop-blur-sm rounded-2xl shadow-soft border border-border overflow-hidden hover:shadow-elevated transition-all hover:${accent.glow}`}
     >
       {/* Post Header */}
       <div className="p-5 flex items-start justify-between">
@@ -129,6 +134,7 @@ const PostCard = ({ post, onLike }: { post: Post; onLike: (id: number) => void }
             alt="Post"
             className="w-full h-full object-cover"
           />
+          <div className="absolute inset-0 bg-gradient-to-t from-card/20 to-transparent" />
         </motion.div>
       )}
 
@@ -136,8 +142,8 @@ const PostCard = ({ post, onLike }: { post: Post; onLike: (id: number) => void }
       <div className="p-4 flex items-center justify-between border-t border-border">
         <div className="flex items-center gap-6">
           <motion.button
-            whileTap={{ scale: 0.9 }}
-            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.85 }}
+            whileHover={{ scale: 1.15 }}
             onClick={() => onLike(post.id)}
             className={`flex items-center gap-2 font-medium transition-colors ${
               post.isLiked ? "text-accent" : "text-muted-foreground hover:text-accent"
@@ -162,8 +168,17 @@ const PostCard = ({ post, onLike }: { post: Post; onLike: (id: number) => void }
 
 const CommunityFeed = () => {
   const [posts, setPosts] = useState(initialPosts);
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: "-100px" });
+  const containerRef = useRef(null);
+  const isInView = useInView(containerRef, { once: true, margin: "-100px" });
+  
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start end", "end start"]
+  });
+
+  const y1 = useTransform(scrollYProgress, [0, 1], [80, -80]);
+  const y2 = useTransform(scrollYProgress, [0, 1], [-60, 60]);
+  const x1 = useTransform(scrollYProgress, [0, 1], [40, -40]);
 
   const handleLike = (id: number) => {
     setPosts((prev) =>
@@ -180,12 +195,22 @@ const CommunityFeed = () => {
   };
 
   return (
-    <section id="community" className="py-20 bg-muted/30 relative overflow-hidden">
-      {/* Background decorations */}
-      <div className="absolute top-1/4 right-0 w-64 h-64 bg-accent/5 rounded-full blur-3xl" />
-      <div className="absolute bottom-1/4 left-0 w-64 h-64 bg-tertiary/5 rounded-full blur-3xl" />
+    <section id="community" className="py-20 relative overflow-hidden" ref={containerRef}>
+      {/* Animated background decorations */}
+      <motion.div 
+        className="absolute top-1/4 right-0 w-72 h-72 bg-accent/10 rounded-full blur-3xl"
+        style={{ y: y1, x: x1 }}
+      />
+      <motion.div 
+        className="absolute bottom-1/4 left-0 w-72 h-72 bg-tertiary/10 rounded-full blur-3xl"
+        style={{ y: y2 }}
+      />
+      <motion.div 
+        className="absolute top-1/2 left-1/3 w-48 h-48 bg-primary/5 rounded-full blur-3xl"
+        style={{ y: y1 }}
+      />
       
-      <div className="container mx-auto px-4 relative z-10" ref={ref}>
+      <div className="container mx-auto px-4 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -202,21 +227,21 @@ const CommunityFeed = () => {
 
         {/* Create Post Prompt */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6, delay: 0.1 }}
+          initial={{ opacity: 0, y: 20, x: -30 }}
+          animate={isInView ? { opacity: 1, y: 0, x: 0 } : {}}
+          transition={{ duration: 0.6, delay: 0.1, type: "spring" }}
           className="max-w-2xl mx-auto mb-8"
         >
-          <div className="bg-card rounded-2xl shadow-soft border border-border p-4 flex items-center gap-4">
+          <div className="bg-card/80 backdrop-blur-sm rounded-2xl shadow-soft border border-border p-4 flex items-center gap-4">
             <Avatar className="w-10 h-10">
               <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground">
                 <PawPrint className="w-5 h-5" />
               </AvatarFallback>
             </Avatar>
-            <div className="flex-1 bg-muted rounded-xl px-4 py-3 text-muted-foreground cursor-pointer hover:bg-muted/70 transition-colors">
+            <div className="flex-1 bg-muted/50 rounded-xl px-4 py-3 text-muted-foreground cursor-pointer hover:bg-muted/70 transition-colors border border-border/50">
               Share something with the community...
             </div>
-            <Button className="bg-gradient-hero shadow-glow hidden sm:flex">
+            <Button className="bg-gradient-hero shadow-glow hidden sm:flex hover:shadow-elevated transition-shadow">
               Post
             </Button>
           </div>
@@ -224,8 +249,8 @@ const CommunityFeed = () => {
 
         {/* Posts Grid */}
         <div className="max-w-2xl mx-auto space-y-6">
-          {posts.map((post) => (
-            <PostCard key={post.id} post={post} onLike={handleLike} />
+          {posts.map((post, index) => (
+            <PostCard key={post.id} post={post} onLike={handleLike} index={index} />
           ))}
         </div>
 
@@ -236,7 +261,7 @@ const CommunityFeed = () => {
           viewport={{ once: true }}
           className="text-center mt-10"
         >
-          <Button variant="outline" size="lg" className="font-semibold border-2 hover:border-primary hover:text-primary">
+          <Button variant="outline" size="lg" className="font-semibold border-2 hover:border-primary hover:text-primary hover:shadow-glow transition-all">
             Load More Posts
           </Button>
         </motion.div>
