@@ -10,34 +10,43 @@ const Hero = () => {
     offset: ["start start", "end start"]
   });
   
-  // Parallax transforms for different directions
-  const y1 = useTransform(scrollYProgress, [0, 1], [0, 300]);
-  const y2 = useTransform(scrollYProgress, [0, 1], [0, -150]);
-  const y3 = useTransform(scrollYProgress, [0, 1], [0, 200]);
-  const x1 = useTransform(scrollYProgress, [0, 1], [0, -100]);
-  const x2 = useTransform(scrollYProgress, [0, 1], [0, 150]);
-  const rotate1 = useTransform(scrollYProgress, [0, 1], [0, 180]);
-  const rotate2 = useTransform(scrollYProgress, [0, 1], [0, -90]);
-  const scale = useTransform(scrollYProgress, [0, 0.5], [1, 0.8]);
-  const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
+  // Enhanced parallax transforms for dramatic multi-directional movement
+  const y1 = useTransform(scrollYProgress, [0, 1], [0, 400]);
+  const y2 = useTransform(scrollYProgress, [0, 1], [0, -200]);
+  const y3 = useTransform(scrollYProgress, [0, 1], [0, 300]);
+  const x1 = useTransform(scrollYProgress, [0, 1], [0, -200]);
+  const x2 = useTransform(scrollYProgress, [0, 1], [0, 250]);
+  const x3 = useTransform(scrollYProgress, [0, 1], [0, -150]);
+  const rotate1 = useTransform(scrollYProgress, [0, 1], [0, 270]);
+  const rotate2 = useTransform(scrollYProgress, [0, 1], [0, -180]);
+  const rotate3 = useTransform(scrollYProgress, [0, 1], [0, 120]);
+  
+  // Content animations - moves upward and fades as you scroll
+  const contentY = useTransform(scrollYProgress, [0, 0.5], [0, -150]);
+  const contentX = useTransform(scrollYProgress, [0, 0.5], [0, -50]);
+  const scale = useTransform(scrollYProgress, [0, 0.5], [1, 0.85]);
+  const opacity = useTransform(scrollYProgress, [0, 0.4], [1, 0]);
 
   const floatingElements = [
     { top: "10%", left: "5%", delay: 0, size: 24, icon: PawPrint, color: "text-primary/40", motion: { y: y1, x: x1, rotate: rotate1 } },
     { top: "15%", right: "8%", delay: 0.5, size: 32, icon: Heart, color: "text-accent/40", motion: { y: y2, x: x2, rotate: rotate2 } },
-    { top: "55%", left: "6%", delay: 1, size: 20, icon: Star, color: "text-quaternary/50", motion: { y: y3, x: x1 } },
-    { top: "65%", right: "7%", delay: 1.5, size: 28, icon: PawPrint, color: "text-tertiary/40", motion: { y: y1, x: x2 } },
-    { top: "35%", right: "12%", delay: 2, size: 18, icon: Heart, color: "text-primary/30", motion: { y: y2, rotate: rotate1 } },
-    { top: "25%", left: "12%", delay: 0.8, size: 22, icon: Star, color: "text-accent/35", motion: { y: y3, x: x2 } },
-    { top: "80%", left: "15%", delay: 1.2, size: 16, icon: Circle, color: "text-tertiary/25", motion: { y: y2, x: x1 } },
-    { top: "45%", left: "3%", delay: 0.3, size: 14, icon: Circle, color: "text-quaternary/30", motion: { y: y1, rotate: rotate2 } },
+    { top: "55%", left: "6%", delay: 1, size: 20, icon: Star, color: "text-quaternary/50", motion: { y: y3, x: x3 } },
+    { top: "65%", right: "7%", delay: 1.5, size: 28, icon: PawPrint, color: "text-tertiary/40", motion: { y: y1, x: x2, rotate: rotate3 } },
+    { top: "35%", right: "12%", delay: 2, size: 18, icon: Heart, color: "text-primary/30", motion: { y: y2, rotate: rotate1, x: x1 } },
+    { top: "25%", left: "12%", delay: 0.8, size: 22, icon: Star, color: "text-accent/35", motion: { y: y3, x: x2, rotate: rotate2 } },
+    { top: "80%", left: "15%", delay: 1.2, size: 16, icon: Circle, color: "text-tertiary/25", motion: { y: y2, x: x1, rotate: rotate3 } },
+    { top: "45%", left: "3%", delay: 0.3, size: 14, icon: Circle, color: "text-quaternary/30", motion: { y: y1, rotate: rotate2, x: x3 } },
+    { top: "70%", right: "15%", delay: 0.7, size: 20, icon: Star, color: "text-primary/35", motion: { y: y3, x: x1, rotate: rotate1 } },
+    { top: "85%", right: "25%", delay: 1.4, size: 18, icon: PawPrint, color: "text-accent/30", motion: { y: y2, x: x2 } },
   ];
 
-  // Background orbs with different parallax
+  // Background orbs with enhanced multi-directional parallax
   const orbs = [
-    { top: "10%", left: "20%", size: "400px", color: "bg-primary/10", blur: "blur-3xl", motion: { y: y2, x: x1 } },
-    { top: "40%", right: "10%", size: "350px", color: "bg-accent/10", blur: "blur-3xl", motion: { y: y1, x: x2 } },
-    { bottom: "20%", left: "30%", size: "300px", color: "bg-tertiary/8", blur: "blur-3xl", motion: { y: y3 } },
-    { top: "60%", right: "30%", size: "250px", color: "bg-quaternary/8", blur: "blur-2xl", motion: { y: y2, x: x1 } },
+    { top: "10%", left: "20%", size: "400px", color: "bg-primary/10", blur: "blur-3xl", motion: { y: y2, x: x1, rotate: rotate3 } },
+    { top: "40%", right: "10%", size: "350px", color: "bg-accent/10", blur: "blur-3xl", motion: { y: y1, x: x2, rotate: rotate2 } },
+    { bottom: "20%", left: "30%", size: "300px", color: "bg-tertiary/8", blur: "blur-3xl", motion: { y: y3, x: x3 } },
+    { top: "60%", right: "30%", size: "250px", color: "bg-quaternary/8", blur: "blur-2xl", motion: { y: y2, x: x1, rotate: rotate1 } },
+    { top: "75%", left: "10%", size: "200px", color: "bg-primary/5", blur: "blur-3xl", motion: { y: y1, x: x2 } },
   ];
 
   return (
@@ -92,7 +101,7 @@ const Hero = () => {
         </motion.div>
       ))}
 
-      <motion.div style={{ scale, opacity }} className="container mx-auto px-4 relative z-10">
+      <motion.div style={{ scale, opacity, y: contentY, x: contentX }} className="container mx-auto px-4 relative z-10">
         <div className="max-w-4xl mx-auto text-center">
           {/* Badge */}
           <motion.div

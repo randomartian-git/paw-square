@@ -176,9 +176,14 @@ const CommunityFeed = () => {
     offset: ["start end", "end start"]
   });
 
-  const y1 = useTransform(scrollYProgress, [0, 1], [80, -80]);
-  const y2 = useTransform(scrollYProgress, [0, 1], [-60, 60]);
-  const x1 = useTransform(scrollYProgress, [0, 1], [40, -40]);
+  // Enhanced multi-directional parallax
+  const y1 = useTransform(scrollYProgress, [0, 1], [120, -120]);
+  const y2 = useTransform(scrollYProgress, [0, 1], [-100, 150]);
+  const y3 = useTransform(scrollYProgress, [0, 1], [80, -80]);
+  const x1 = useTransform(scrollYProgress, [0, 1], [80, -80]);
+  const x2 = useTransform(scrollYProgress, [0, 1], [-100, 100]);
+  const rotate1 = useTransform(scrollYProgress, [0, 1], [0, 45]);
+  const rotate2 = useTransform(scrollYProgress, [0, 1], [0, -30]);
 
   const handleLike = (id: number) => {
     setPosts((prev) =>
@@ -196,18 +201,26 @@ const CommunityFeed = () => {
 
   return (
     <section id="community" className="py-20 relative overflow-hidden" ref={containerRef}>
-      {/* Animated background decorations */}
+      {/* Enhanced animated background decorations with multi-directional movement */}
       <motion.div 
         className="absolute top-1/4 right-0 w-72 h-72 bg-accent/10 rounded-full blur-3xl"
-        style={{ y: y1, x: x1 }}
+        style={{ y: y1, x: x1, rotate: rotate1 }}
       />
       <motion.div 
         className="absolute bottom-1/4 left-0 w-72 h-72 bg-tertiary/10 rounded-full blur-3xl"
-        style={{ y: y2 }}
+        style={{ y: y2, x: x2, rotate: rotate2 }}
       />
       <motion.div 
         className="absolute top-1/2 left-1/3 w-48 h-48 bg-primary/5 rounded-full blur-3xl"
-        style={{ y: y1 }}
+        style={{ y: y3, x: x1 }}
+      />
+      <motion.div 
+        className="absolute top-3/4 right-1/4 w-64 h-64 bg-quaternary/8 rounded-full blur-3xl"
+        style={{ y: y1, x: x2, rotate: rotate1 }}
+      />
+      <motion.div 
+        className="absolute bottom-0 left-1/2 w-56 h-56 bg-accent/5 rounded-full blur-3xl"
+        style={{ y: y2, x: x1, rotate: rotate2 }}
       />
       
       <div className="container mx-auto px-4 relative z-10">
