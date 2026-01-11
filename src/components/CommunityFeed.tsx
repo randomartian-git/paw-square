@@ -1,6 +1,6 @@
-import { motion } from "framer-motion";
+import { motion, useInView } from "framer-motion";
 import { Heart, MessageCircle, Share2, MoreHorizontal, PawPrint } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -18,6 +18,7 @@ interface Post {
   comments: number;
   timeAgo: string;
   isLiked: boolean;
+  accentColor: string;
 }
 
 const initialPosts: Post[] = [
@@ -35,6 +36,7 @@ const initialPosts: Post[] = [
     comments: 45,
     timeAgo: "2 hours ago",
     isLiked: false,
+    accentColor: "primary",
   },
   {
     id: 2,
@@ -49,6 +51,7 @@ const initialPosts: Post[] = [
     comments: 89,
     timeAgo: "4 hours ago",
     isLiked: true,
+    accentColor: "accent",
   },
   {
     id: 3,
@@ -64,24 +67,34 @@ const initialPosts: Post[] = [
     comments: 156,
     timeAgo: "6 hours ago",
     isLiked: false,
+    accentColor: "tertiary",
   },
 ];
 
+const accentStyles: Record<string, { ring: string; bg: string }> = {
+  primary: { ring: "ring-primary/30", bg: "bg-primary" },
+  accent: { ring: "ring-accent/30", bg: "bg-accent" },
+  tertiary: { ring: "ring-tertiary/30", bg: "bg-tertiary" },
+};
+
 const PostCard = ({ post, onLike }: { post: Post; onLike: (id: number) => void }) => {
+  const accent = accentStyles[post.accentColor] || accentStyles.primary;
+  
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
+      viewport={{ once: true, margin: "-50px" }}
       transition={{ duration: 0.5 }}
-      className="bg-card rounded-2xl shadow-soft border border-border overflow-hidden hover:shadow-elevated transition-shadow"
+      whileHover={{ scale: 1.01 }}
+      className="bg-card rounded-2xl shadow-soft border border-border overflow-hidden hover:shadow-elevated transition-all"
     >
       {/* Post Header */}
       <div className="p-5 flex items-start justify-between">
         <div className="flex items-center gap-3">
-          <Avatar className="w-12 h-12 ring-2 ring-primary/20">
+          <Avatar className={`w-12 h-12 ring-2 ${accent.ring}`}>
             <AvatarImage src={post.author.avatar} alt={post.author.name} />
-            <AvatarFallback>{post.author.name[0]}</AvatarFallback>
+            <AvatarFallback className={accent.bg}>{post.author.name[0]}</AvatarFallback>
           </Avatar>
           <div>
             <h4 className="font-semibold text-foreground">{post.author.name}</h4>
@@ -106,13 +119,17 @@ const PostCard = ({ post, onLike }: { post: Post; onLike: (id: number) => void }
 
       {/* Post Image */}
       {post.image && (
-        <div className="relative aspect-video bg-muted">
+        <motion.div 
+          className="relative aspect-video bg-muted overflow-hidden"
+          whileHover={{ scale: 1.02 }}
+          transition={{ duration: 0.3 }}
+        >
           <img
             src={post.image}
             alt="Post"
             className="w-full h-full object-cover"
           />
-        </div>
+        </motion.div>
       )}
 
       {/* Post Actions */}
@@ -120,6 +137,7 @@ const PostCard = ({ post, onLike }: { post: Post; onLike: (id: number) => void }
         <div className="flex items-center gap-6">
           <motion.button
             whileTap={{ scale: 0.9 }}
+            whileHover={{ scale: 1.1 }}
             onClick={() => onLike(post.id)}
             className={`flex items-center gap-2 font-medium transition-colors ${
               post.isLiked ? "text-accent" : "text-muted-foreground hover:text-accent"
@@ -128,12 +146,12 @@ const PostCard = ({ post, onLike }: { post: Post; onLike: (id: number) => void }
             <Heart className={`w-5 h-5 ${post.isLiked ? "fill-accent" : ""}`} />
             <span>{post.likes}</span>
           </motion.button>
-          <button className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors font-medium">
+          <button className="flex items-center gap-2 text-muted-foreground hover:text-tertiary transition-colors font-medium">
             <MessageCircle className="w-5 h-5" />
             <span>{post.comments}</span>
           </button>
         </div>
-        <button className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors font-medium">
+        <button className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors font-medium">
           <Share2 className="w-5 h-5" />
           <span className="hidden sm:inline">Share</span>
         </button>
@@ -144,6 +162,8 @@ const PostCard = ({ post, onLike }: { post: Post; onLike: (id: number) => void }
 
 const CommunityFeed = () => {
   const [posts, setPosts] = useState(initialPosts);
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: "-100px" });
 
   const handleLike = (id: number) => {
     setPosts((prev) =>
@@ -160,12 +180,16 @@ const CommunityFeed = () => {
   };
 
   return (
-    <section id="community" className="py-20 bg-muted/30">
-      <div className="container mx-auto px-4">
+    <section id="community" className="py-20 bg-muted/30 relative overflow-hidden">
+      {/* Background decorations */}
+      <div className="absolute top-1/4 right-0 w-64 h-64 bg-accent/5 rounded-full blur-3xl" />
+      <div className="absolute bottom-1/4 left-0 w-64 h-64 bg-tertiary/5 rounded-full blur-3xl" />
+      
+      <div className="container mx-auto px-4 relative z-10" ref={ref}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6 }}
           className="text-center mb-12"
         >
           <h2 className="text-3xl sm:text-4xl font-display font-bold text-foreground mb-4">
@@ -179,13 +203,13 @@ const CommunityFeed = () => {
         {/* Create Post Prompt */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6, delay: 0.1 }}
           className="max-w-2xl mx-auto mb-8"
         >
           <div className="bg-card rounded-2xl shadow-soft border border-border p-4 flex items-center gap-4">
             <Avatar className="w-10 h-10">
-              <AvatarFallback className="bg-primary text-primary-foreground">
+              <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground">
                 <PawPrint className="w-5 h-5" />
               </AvatarFallback>
             </Avatar>
@@ -212,7 +236,7 @@ const CommunityFeed = () => {
           viewport={{ once: true }}
           className="text-center mt-10"
         >
-          <Button variant="outline" size="lg" className="font-semibold">
+          <Button variant="outline" size="lg" className="font-semibold border-2 hover:border-primary hover:text-primary">
             Load More Posts
           </Button>
         </motion.div>
