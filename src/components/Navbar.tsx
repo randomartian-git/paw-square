@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { PawPrint, Users, MessageCircle, Heart, Menu, X, Sparkles, MessageSquarePlus, User, Info, LogOut } from "lucide-react";
+import { PawPrint, Users, Menu, X, Sparkles, MessageSquarePlus, Info, LogOut, Settings } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -87,6 +87,10 @@ const Navbar = () => {
                   </Avatar>
                   Profile
                 </Button>
+                <Button variant="ghost" onClick={() => navigate("/settings")} className="font-semibold">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Settings
+                </Button>
                 <Button variant="ghost" onClick={signOut} className="font-semibold hover:text-destructive">
                   <LogOut className="w-4 h-4 mr-2" />
                   Sign Out
@@ -94,10 +98,14 @@ const Navbar = () => {
               </>
             ) : (
               <>
+                <Button variant="ghost" onClick={() => navigate("/settings")} className="font-semibold">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Settings
+                </Button>
                 <Button variant="ghost" onClick={() => navigate("/auth")} className="font-semibold hover:text-primary">
                   Sign In
                 </Button>
-                <Button onClick={() => navigate("/auth")} className="bg-gradient-hero font-semibold shadow-glow hover:shadow-elevated transition-shadow">
+                <Button onClick={() => navigate("/auth?mode=signup")} className="bg-gradient-hero font-semibold shadow-glow hover:shadow-elevated transition-shadow">
                   <Sparkles className="w-4 h-4 mr-2" />
                   Join the Pack
                 </Button>
@@ -142,10 +150,14 @@ const Navbar = () => {
                 );
               })}
               <div className="flex flex-col gap-2 px-4 pt-4 border-t border-border">
-                <Button variant="ghost" className="w-full justify-center">
+                <Button variant="ghost" onClick={() => { navigate("/settings"); setIsOpen(false); }} className="w-full justify-center">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Settings
+                </Button>
+                <Button variant="ghost" onClick={() => { navigate("/auth"); setIsOpen(false); }} className="w-full justify-center">
                   Sign In
                 </Button>
-                <Button className="w-full bg-gradient-hero shadow-glow">
+                <Button onClick={() => { navigate("/auth?mode=signup"); setIsOpen(false); }} className="w-full bg-gradient-hero shadow-glow">
                   <Sparkles className="w-4 h-4 mr-2" />
                   Join the Pack
                 </Button>

@@ -14,21 +14,32 @@ const emailSchema = z.string().email("Please enter a valid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
 
 const Auth = () => {
-  const [isLogin, setIsLogin] = useState(true);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { user } = useAuth();
+  
+  // Check URL params for mode
+  const urlParams = new URLSearchParams(window.location.search);
+  const initialMode = urlParams.get("mode") === "signup" ? false : true;
+  
+  const [isLogin, setIsLogin] = useState(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const { user } = useAuth();
 
   useEffect(() => {
     if (user) {
       navigate("/");
     }
   }, [user, navigate]);
+  
+  // Update mode when URL changes
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setIsLogin(params.get("mode") !== "signup");
+  }, []);
 
   const validateForm = () => {
     try {
