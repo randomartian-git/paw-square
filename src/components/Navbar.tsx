@@ -1,17 +1,21 @@
 import { motion } from "framer-motion";
-import { PawPrint, Users, MessageCircle, Heart, Menu, X, Sparkles, MessageSquarePlus } from "lucide-react";
+import { PawPrint, Users, MessageCircle, Heart, Menu, X, Sparkles, MessageSquarePlus, User, Info, LogOut } from "lucide-react";
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
 
   const navLinks = [
-    { name: "Community", icon: Users, href: "/#community" },
+    { name: "Community", icon: Users, href: "/community" },
     { name: "Forum", icon: MessageSquarePlus, href: "/forum" },
-    { name: "Pet Spotlights", icon: Heart, href: "/#spotlights" },
+    { name: "About", icon: Info, href: "/about" },
   ];
 
   return (
@@ -73,13 +77,32 @@ const Navbar = () => {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            <Button variant="ghost" className="font-semibold hover:text-primary">
-              Sign In
-            </Button>
-            <Button className="bg-gradient-hero font-semibold shadow-glow hover:shadow-elevated transition-shadow">
-              <Sparkles className="w-4 h-4 mr-2" />
-              Join the Pack
-            </Button>
+            {user ? (
+              <>
+                <Button variant="ghost" onClick={() => navigate("/profile")} className="font-semibold">
+                  <Avatar className="w-6 h-6 mr-2">
+                    <AvatarFallback className="bg-gradient-hero text-xs text-primary-foreground">
+                      {user.email?.[0]?.toUpperCase() || "?"}
+                    </AvatarFallback>
+                  </Avatar>
+                  Profile
+                </Button>
+                <Button variant="ghost" onClick={signOut} className="font-semibold hover:text-destructive">
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign Out
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" onClick={() => navigate("/auth")} className="font-semibold hover:text-primary">
+                  Sign In
+                </Button>
+                <Button onClick={() => navigate("/auth")} className="bg-gradient-hero font-semibold shadow-glow hover:shadow-elevated transition-shadow">
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Join the Pack
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
