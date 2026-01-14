@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
-  User, MapPin, Calendar, Edit2, Plus, Dog, Cat, Bird, 
-  Fish, Rabbit, Sparkles, BookmarkIcon, MessageSquare,
+  MapPin, Calendar, Edit2, Plus, Dog, BookmarkIcon, MessageSquare,
   Heart, Award, Camera, X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,6 +15,8 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
+import PetCard from "@/components/profile/PetCard";
+import PetPhotoGallery from "@/components/profile/PetPhotoGallery";
 import { formatDistanceToNow } from "date-fns";
 
 type Profile = {
@@ -48,15 +49,6 @@ type Post = {
   user_id: string;
 };
 
-const petTypeIcons: Record<string, any> = {
-  dog: Dog,
-  cat: Cat,
-  bird: Bird,
-  fish: Fish,
-  rabbit: Rabbit,
-  hamster: Sparkles,
-  other: Sparkles,
-};
 
 const allFlairs = [
   { id: "helpful", name: "Helpful Owner", icon: Heart, color: "bg-red-500/20 text-red-400" },
@@ -81,6 +73,7 @@ const Profile = () => {
     bio: "",
     location: "",
   });
+  const [galleryPet, setGalleryPet] = useState<Pet | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -159,6 +152,51 @@ const Profile = () => {
         ? prev.filter(f => f !== flairId)
         : [...prev, flairId]
     );
+  };
+
+  const handleDeletePet = async (petId: string) => {
+    if (!user) return;
+
+    // Delete pet photos from storage first
+    const { data: files } = await supabase.storage
+      .from("pet-photos")
+      .list(`${user.id}/${petId}`);
+
+    if (files && files.length > 0) {
+      const filePaths = files.map((file) => `${user.id}/${petId}/${file.name}`);
+      await supabase.storage.from("pet-photos").remove(filePaths);
+    }
+
+    // Also check for photos in the old path format
+    const { data: oldFiles } = await supabase.storage
+      .from("pet-photos")
+      .list(user.id);
+
+    if (oldFiles) {
+      // Filter to find files that might belong to this pet (we can't be 100% sure for old format)
+      const pet = pets.find((p) => p.id === petId);
+      if (pet?.photo_url) {
+        const urlParts = pet.photo_url.split("/pet-photos/");
+        if (urlParts.length > 1) {
+          const filePath = decodeURIComponent(urlParts[1]);
+          await supabase.storage.from("pet-photos").remove([filePath]);
+        }
+      }
+    }
+
+    // Delete the pet record
+    const { error } = await supabase.from("pets").delete().eq("id", petId);
+
+    if (error) {
+      toast({
+        title: "Error deleting pet",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({ title: "Pet removed successfully" });
+      fetchData();
+    }
   };
 
   if (authLoading || loading) {
@@ -350,34 +388,16 @@ const Profile = () => {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {pets.map((pet) => {
-                    const PetIcon = petTypeIcons[pet.type] || Sparkles;
-                    return (
-                      <div
+                  <AnimatePresence>
+                    {pets.map((pet) => (
+                      <PetCard
                         key={pet.id}
-                        className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-                      >
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                          {pet.photo_url ? (
-                            <img
-                              src={pet.photo_url}
-                              alt={pet.name}
-                              className="w-full h-full rounded-full object-cover"
-                            />
-                          ) : (
-                            <PetIcon className="w-6 h-6 text-primary-foreground" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-medium">{pet.name}</p>
-                          <p className="text-xs text-muted-foreground capitalize">
-                            {pet.breed || pet.type}
-                            {pet.age_years && ` • ${pet.age_years} yrs`}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
+                        pet={pet}
+                        onDelete={handleDeletePet}
+                        onViewGallery={setGalleryPet}
+                      />
+                    ))}
+                  </AnimatePresence>
                 </div>
               )}
 
@@ -499,6 +519,14 @@ const Profile = () => {
           </motion.div>
         </div>
       </main>
+
+      {/* Pet Photo Gallery */}
+      <PetPhotoGallery
+        pet={galleryPet}
+        isOpen={!!galleryPet}
+        onClose={() => setGalleryPet(null)}
+        onPhotoUpdated={fetchData}
+      />
     </div>
   );
 };
