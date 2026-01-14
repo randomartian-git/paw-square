@@ -1,9 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+const RATE_LIMIT_PER_HOUR = 20;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -11,9 +14,90 @@ serve(async (req) => {
   }
 
   try {
+    // Verify authentication
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      console.log("Missing or invalid authorization header");
+      return new Response(
+        JSON.stringify({ error: "Authentication required. Please sign in to use the AI assistant." }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Create Supabase client with user's token
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    // Verify the user using getClaims for JWT validation
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
+
+    if (claimsError || !claimsData?.claims) {
+      console.log("JWT validation failed:", claimsError?.message);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized. Please sign in again." }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const userId = claimsData.claims.sub;
+    if (!userId) {
+      console.log("No user ID in token claims");
+      return new Response(
+        JSON.stringify({ error: "Invalid authentication token" }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Check rate limiting (20 requests per hour)
+    const oneHourAgo = new Date(Date.now() - 3600000).toISOString();
+    const { count, error: countError } = await supabaseClient
+      .from("ai_usage")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .gte("created_at", oneHourAgo);
+
+    if (countError) {
+      console.error("Error checking rate limit:", countError);
+    } else if (count !== null && count >= RATE_LIMIT_PER_HOUR) {
+      console.log(`Rate limit exceeded for user ${userId}: ${count} requests in last hour`);
+      return new Response(
+        JSON.stringify({ 
+          error: "Rate limit exceeded. You can send up to 20 messages per hour. Please try again later." 
+        }),
+        {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Log this usage
+    const { error: insertError } = await supabaseClient
+      .from("ai_usage")
+      .insert({ user_id: userId });
+
+    if (insertError) {
+      console.error("Error logging AI usage:", insertError);
+      // Continue anyway - don't block the request due to logging failure
+    }
+
+    // Parse the request body
     const { messages } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    
+
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
