@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   MapPin, Calendar, Edit2, Plus, Dog, BookmarkIcon, MessageSquare,
-  Heart, Award, Camera, X
+  Heart, Award, Camera, X, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,7 @@ type Profile = {
   display_name: string | null;
   bio: string | null;
   avatar_url: string | null;
+  banner_url: string | null;
   location: string | null;
   created_at: string;
   flair: string[] | null;
@@ -78,6 +79,10 @@ const Profile = () => {
     location: "",
   });
   const [galleryPet, setGalleryPet] = useState<Pet | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -220,6 +225,106 @@ const Profile = () => {
     }
   };
 
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Image must be less than 5MB", variant: "destructive" });
+      return;
+    }
+
+    setUploadingAvatar(true);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${user.id}/avatar.${fileExt}`;
+
+      // Delete old avatar if exists
+      if (profile?.avatar_url) {
+        const oldPath = profile.avatar_url.split('/profile-images/')[1];
+        if (oldPath) {
+          await supabase.storage.from('profile-images').remove([decodeURIComponent(oldPath)]);
+        }
+      }
+
+      const { error: uploadError } = await supabase.storage
+        .from('profile-images')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('profile-images')
+        .getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('user_id', user.id);
+
+      if (updateError) throw updateError;
+
+      setProfile(prev => prev ? { ...prev, avatar_url: publicUrl } : null);
+      toast({ title: "Profile picture updated!" });
+    } catch (error: any) {
+      toast({ title: "Error uploading image", description: error.message, variant: "destructive" });
+    } finally {
+      setUploadingAvatar(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
+  };
+
+  const handleBannerUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Image must be less than 5MB", variant: "destructive" });
+      return;
+    }
+
+    setUploadingBanner(true);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${user.id}/banner.${fileExt}`;
+
+      // Delete old banner if exists
+      if (profile?.banner_url) {
+        const oldPath = profile.banner_url.split('/profile-images/')[1];
+        if (oldPath) {
+          await supabase.storage.from('profile-images').remove([decodeURIComponent(oldPath)]);
+        }
+      }
+
+      const { error: uploadError } = await supabase.storage
+        .from('profile-images')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('profile-images')
+        .getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ banner_url: publicUrl })
+        .eq('user_id', user.id);
+
+      if (updateError) throw updateError;
+
+      setProfile(prev => prev ? { ...prev, banner_url: publicUrl } : null);
+      toast({ title: "Banner updated!" });
+    } catch (error: any) {
+      toast({ title: "Error uploading banner", description: error.message, variant: "destructive" });
+    } finally {
+      setUploadingBanner(false);
+      if (bannerInputRef.current) bannerInputRef.current.value = '';
+    }
+  };
+
   const handleDeletePet = async (petId: string) => {
     if (!user) return;
 
@@ -286,32 +391,68 @@ const Profile = () => {
       <main className="container mx-auto px-4 pt-24 pb-12">
         {/* Profile Header */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
           className="bg-card rounded-2xl border border-border overflow-hidden mb-8"
         >
           {/* Banner */}
-          <div className="h-32 bg-gradient-to-r from-primary/30 via-accent/30 to-tertiary/30 relative group">
-            <div className="absolute inset-0 bg-[url('/placeholder.svg')] bg-cover bg-center opacity-20" />
-            <button className="absolute bottom-2 right-2 p-2 rounded-lg bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity">
-              <Camera className="w-4 h-4" />
-            </button>
+          <div 
+            className="h-32 relative group cursor-pointer overflow-hidden"
+            onClick={() => bannerInputRef.current?.click()}
+          >
+            {profile?.banner_url ? (
+              <img 
+                src={profile.banner_url} 
+                alt="Profile banner" 
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-r from-primary/30 via-accent/30 to-tertiary/30" />
+            )}
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              {uploadingBanner ? (
+                <Loader2 className="w-6 h-6 text-white animate-spin" />
+              ) : (
+                <Camera className="w-6 h-6 text-white" />
+              )}
+            </div>
+            <input
+              ref={bannerInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleBannerUpload}
+              className="hidden"
+            />
           </div>
           
           {/* Profile Info */}
           <div className="px-6 pb-6">
             <div className="flex flex-col sm:flex-row sm:items-end gap-4 -mt-12">
-              <div className="relative group">
+              <div 
+                className="relative group cursor-pointer"
+                onClick={() => avatarInputRef.current?.click()}
+              >
                 <Avatar className="w-24 h-24 border-4 border-card">
                   <AvatarImage src={profile?.avatar_url || undefined} />
                   <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-3xl text-primary-foreground">
                     {profile?.display_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "?"}
                   </AvatarFallback>
                 </Avatar>
-                <button className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <Camera className="w-6 h-6 text-white" />
-                </button>
+                <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  {uploadingAvatar ? (
+                    <Loader2 className="w-6 h-6 text-white animate-spin" />
+                  ) : (
+                    <Camera className="w-6 h-6 text-white" />
+                  )}
+                </div>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                  className="hidden"
+                />
               </div>
               
               <div className="flex-1">
