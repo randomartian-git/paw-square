@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { PawPrint, Users, Menu, X, Sparkles, MessageSquarePlus, Info, LogOut, Settings } from "lucide-react";
+import { PawPrint, Users, Menu, X, Sparkles, Info, LogOut, Settings } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,6 @@ const Navbar = () => {
 
   const navLinks = [
     { name: "Community", icon: Users, href: "/community" },
-    { name: "Forum", icon: MessageSquarePlus, href: "/forum" },
     { name: "About", icon: Info, href: "/about" },
   ];
 
@@ -43,10 +42,8 @@ const Navbar = () => {
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-8">
-            {navLinks.map((link, index) => {
-              const isActive = link.href === "/forum" 
-                ? location.pathname === "/forum"
-                : location.pathname === "/" && link.href.startsWith("/#");
+          {navLinks.map((link, index) => {
+              const isActive = location.pathname === link.href;
               
               const LinkComponent = link.href.startsWith("/") && !link.href.includes("#") ? Link : "a";
               const linkProps = link.href.startsWith("/") && !link.href.includes("#")
