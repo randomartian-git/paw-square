@@ -17,7 +17,6 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CreatePostDialog from "@/components/community/CreatePostDialog";
-import PostDetailModal from "@/components/post/PostDetailModal";
 import { formatDistanceToNow } from "date-fns";
 
 type Post = {
@@ -86,7 +85,6 @@ const Community = () => {
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<"hot" | "new" | "top">("hot");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
   const [bookmarkedPosts, setBookmarkedPosts] = useState<Set<string>>(new Set());
   const { user } = useAuth();
@@ -486,7 +484,6 @@ const Community = () => {
                         isBookmarked={bookmarkedPosts.has(post.id)}
                         onLike={() => handleLike(post.id)}
                         onBookmark={() => handleBookmark(post.id)}
-                        onOpenPost={() => setSelectedPost(post)}
                       />
                     ))}
                   </AnimatePresence>
@@ -504,15 +501,6 @@ const Community = () => {
         onClose={() => setIsCreateOpen(false)}
         onPostCreated={fetchPosts}
       />
-
-      <PostDetailModal
-        isOpen={!!selectedPost}
-        onClose={() => setSelectedPost(null)}
-        post={selectedPost ? {
-          ...selectedPost,
-          author: selectedPost.profiles
-        } : null}
-      />
     </div>
   );
 };
@@ -524,10 +512,9 @@ interface PostCardProps {
   isBookmarked: boolean;
   onLike: () => void;
   onBookmark: () => void;
-  onOpenPost: () => void;
 }
 
-const PostCard = ({ post, index, isLiked, isBookmarked, onLike, onBookmark, onOpenPost }: PostCardProps) => {
+const PostCard = ({ post, index, isLiked, isBookmarked, onLike, onBookmark }: PostCardProps) => {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-50px" });
   const navigate = useNavigate();
@@ -537,13 +524,17 @@ const PostCard = ({ post, index, isLiked, isBookmarked, onLike, onBookmark, onOp
 
   const handleShare = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const url = `${window.location.origin}/community?post=${post.id}`;
+    const url = `${window.location.origin}/post/${post.id}`;
     try {
       await navigator.clipboard.writeText(url);
       toast({ title: "Link copied to clipboard!" });
     } catch {
       toast({ title: "Failed to copy link", variant: "destructive" });
     }
+  };
+
+  const handleOpenPost = () => {
+    navigate(`/post/${post.id}`);
   };
 
   const handleAuthorClick = (e: React.MouseEvent) => {
@@ -558,7 +549,7 @@ const PostCard = ({ post, index, isLiked, isBookmarked, onLike, onBookmark, onOp
       animate={isInView ? { opacity: 1, y: 0 } : {}}
       exit={{ opacity: 0, y: -20 }}
       transition={{ delay: index * 0.05, duration: 0.3 }}
-      onClick={onOpenPost}
+      onClick={handleOpenPost}
       className="group bg-card/50 backdrop-blur-sm rounded-2xl border border-border/50 p-6 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 transition-all duration-200 cursor-pointer"
     >
       <div className="flex gap-4">
@@ -643,7 +634,7 @@ const PostCard = ({ post, index, isLiked, isBookmarked, onLike, onBookmark, onOp
             {/* Stats */}
             <div className="flex items-center gap-4 text-muted-foreground">
               <button 
-                onClick={(e) => { e.stopPropagation(); onOpenPost(); }}
+                onClick={(e) => { e.stopPropagation(); handleOpenPost(); }}
                 className="flex items-center gap-1 text-sm hover:text-accent transition-colors"
               >
                 <MessageCircle className="w-4 h-4" />

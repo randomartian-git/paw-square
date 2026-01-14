@@ -18,7 +18,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import { formatDistanceToNow } from "date-fns";
 import AddPetModal from "@/components/profile/AddPetModal";
-import PostDetailModal from "@/components/post/PostDetailModal";
 
 type Profile = {
   id: string;
@@ -79,7 +78,6 @@ const Profile = () => {
   const [isAddPetOpen, setIsAddPetOpen] = useState(false);
   const [isEditingFlairs, setIsEditingFlairs] = useState(false);
   const [selectedFlairs, setSelectedFlairs] = useState<string[]>(["helpful", "active"]);
-  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [editForm, setEditForm] = useState({
     display_name: "",
     bio: "",
@@ -434,7 +432,7 @@ const Profile = () => {
                     <motion.div
                       key={post.id}
                       whileHover={{ scale: 1.01 }}
-                      onClick={() => setSelectedPost({ ...post, author: { display_name: profile?.display_name, avatar_url: profile?.avatar_url } } as any)}
+                      onClick={() => navigate(`/post/${post.id}`)}
                       className="bg-card rounded-xl border border-border p-4 cursor-pointer hover:border-primary/30 transition-all"
                     >
                       <div className="flex items-center justify-between">
@@ -477,7 +475,7 @@ const Profile = () => {
                     <motion.div
                       key={post.id}
                       whileHover={{ scale: 1.01 }}
-                      onClick={() => setSelectedPost(post as any)}
+                      onClick={() => navigate(`/post/${post.id}`)}
                       className="bg-card rounded-xl border border-border p-4 cursor-pointer hover:border-primary/30 transition-all"
                     >
                       <Badge variant="outline" className="mb-2 capitalize">
@@ -508,12 +506,6 @@ const Profile = () => {
         isOpen={isAddPetOpen} 
         onClose={() => setIsAddPetOpen(false)} 
         onPetAdded={fetchData}
-      />
-
-      <PostDetailModal
-        isOpen={!!selectedPost}
-        onClose={() => setSelectedPost(null)}
-        post={selectedPost}
       />
     </div>
   );

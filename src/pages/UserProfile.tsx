@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import { formatDistanceToNow } from "date-fns";
-import PostDetailModal from "@/components/post/PostDetailModal";
 
 type Profile = {
   id: string;
@@ -54,7 +53,6 @@ const UserProfile = () => {
   const [pets, setPets] = useState<Pet[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
   useEffect(() => {
     if (userId) fetchData();
@@ -198,7 +196,7 @@ const UserProfile = () => {
                   <motion.div
                     key={post.id}
                     whileHover={{ scale: 1.01 }}
-                    onClick={() => setSelectedPost({ ...post, author: { display_name: profile.display_name, avatar_url: profile.avatar_url } } as any)}
+                    onClick={() => navigate(`/post/${post.id}`)}
                     className="bg-card rounded-xl border border-border p-4 cursor-pointer hover:border-primary/30 transition-all"
                   >
                     <Badge variant="outline" className="mb-2 capitalize">{post.category}</Badge>
@@ -220,12 +218,6 @@ const UserProfile = () => {
           </motion.div>
         </div>
       </main>
-
-      <PostDetailModal
-        isOpen={!!selectedPost}
-        onClose={() => setSelectedPost(null)}
-        post={selectedPost}
-      />
     </div>
   );
 };
