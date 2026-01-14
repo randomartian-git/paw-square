@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence, useScroll, useTransform, useInView } from "framer-motion";
+import { motion, AnimatePresence, useInView } from "framer-motion";
 import { 
-  Heart, MessageCircle, Bookmark, Share2, Filter, 
+  Heart, MessageCircle, Bookmark, Share2, 
   TrendingUp, Clock, Dog, Cat, Bird, Fish, Rabbit,
-  Plus, Search, Sparkles, Eye, ChevronUp, HelpCircle,
+  Plus, Search, Sparkles, ChevronUp, HelpCircle,
   MessageSquare, Lightbulb, Image
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import CreatePostDialog from "@/components/community/CreatePostDialog";
 import { formatDistanceToNow } from "date-fns";
 
 type Post = {
@@ -84,11 +83,11 @@ const Community = () => {
   const [selectedPetType, setSelectedPetType] = useState<string | null>(null);
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<"hot" | "new" | "top">("hot");
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
   const [bookmarkedPosts, setBookmarkedPosts] = useState<Set<string>>(new Set());
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchPosts();
@@ -294,7 +293,7 @@ const Community = () => {
             className="md:hidden mb-6"
           >
             <Button 
-              onClick={() => setIsCreateOpen(true)}
+              onClick={() => navigate("/create-post")}
               className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90"
             >
               <Plus className="w-5 h-5 mr-2" />
@@ -325,7 +324,7 @@ const Community = () => {
 
                 {/* Create Post Button - Desktop */}
                 <Button
-                  onClick={() => setIsCreateOpen(true)}
+                  onClick={() => navigate("/create-post")}
                   className="hidden md:flex w-full bg-gradient-to-r from-primary to-accent hover:opacity-90"
                 >
                   <Plus className="w-5 h-5 mr-2" />
@@ -468,7 +467,7 @@ const Community = () => {
                     </div>
                     <h3 className="text-xl font-semibold mb-2">No posts yet</h3>
                     <p className="text-muted-foreground mb-4">Be the first to share something with the community!</p>
-                    <Button onClick={() => setIsCreateOpen(true)} className="bg-gradient-to-r from-primary to-accent">
+                    <Button onClick={() => navigate("/create-post")} className="bg-gradient-to-r from-primary to-accent">
                       <Plus className="w-4 h-4 mr-2" />
                       Create First Post
                     </Button>
@@ -495,12 +494,6 @@ const Community = () => {
       </main>
 
       <Footer />
-
-      <CreatePostDialog
-        isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        onPostCreated={fetchPosts}
-      />
     </div>
   );
 };
