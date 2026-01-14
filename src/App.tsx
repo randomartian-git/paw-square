@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import Community from "./pages/Community";
 import Profile from "./pages/Profile";
 import UserProfile from "./pages/UserProfile";
+import PetProfile from "./pages/PetProfile";
 import About from "./pages/About";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -36,6 +37,7 @@ const App = () => (
               <Route path="/community" element={<Community />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/profile/:userId" element={<UserProfile />} />
+              <Route path="/pet/:petId" element={<PetProfile />} />
               <Route path="/about" element={<About />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/ai-assistant" element={<AIAssistant />} />
