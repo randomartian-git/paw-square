@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import CommunityFeed from "@/components/CommunityFeed";
@@ -11,37 +10,9 @@ const Index = () => {
     <div className="min-h-screen bg-background overflow-x-hidden">
       <Navbar />
       <Hero />
-      
-      {/* Features section - simple fade in */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true, margin: "-100px" }}
-        transition={{ duration: 0.6 }}
-      >
-        <Features />
-      </motion.div>
-      
-      {/* Community Feed - simple fade in */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true, margin: "-100px" }}
-        transition={{ duration: 0.6 }}
-      >
-        <CommunityFeed />
-      </motion.div>
-      
-      {/* Pet Spotlights - simple fade in */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true, margin: "-100px" }}
-        transition={{ duration: 0.6 }}
-      >
-        <PetSpotlights />
-      </motion.div>
-      
+      <Features />
+      <CommunityFeed />
+      <PetSpotlights />
       <Footer />
     </div>
   );
