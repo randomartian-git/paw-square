@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Settings as SettingsIcon, Sun, Moon, Eye, Check, ArrowLeft, Lock, Mail } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Settings as SettingsIcon, Sun, Moon, Eye, Check, ArrowLeft, Lock, Mail, Trash2, AlertTriangle } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { useTheme, ThemeMode } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,17 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import Navbar from "@/components/Navbar";
 
 const themeOptions: { id: ThemeMode; name: string; description: string; icon: typeof Sun; colors: string[] }[] = [
@@ -37,14 +48,54 @@ const themeOptions: { id: ThemeMode; name: string; description: string; icon: ty
 
 const Settings = () => {
   const { theme, setTheme } = useTheme();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [newEmail, setNewEmail] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== "DELETE") {
+      toast({ title: "Please type DELETE to confirm", variant: "destructive" });
+      return;
+    }
+
+    setIsDeletingAccount(true);
+    try {
+      // Delete user data from related tables first
+      if (user) {
+        await supabase.from("pets").delete().eq("user_id", user.id);
+        await supabase.from("posts").delete().eq("user_id", user.id);
+        await supabase.from("comments").delete().eq("user_id", user.id);
+        await supabase.from("likes").delete().eq("user_id", user.id);
+        await supabase.from("bookmarks").delete().eq("user_id", user.id);
+        await supabase.from("profiles").delete().eq("user_id", user.id);
+      }
+
+      // Sign out the user
+      await signOut();
+      
+      toast({ 
+        title: "Account deleted", 
+        description: "Your account and all associated data have been removed." 
+      });
+      navigate("/");
+    } catch (error: any) {
+      toast({ 
+        title: "Error deleting account", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
 
   const handleUpdateEmail = async () => {
     if (!newEmail.trim()) {
@@ -295,6 +346,83 @@ const Settings = () => {
                       {isUpdatingPassword ? "Updating..." : "Update Password"}
                     </Button>
                   </div>
+                </motion.div>
+
+                {/* Delete Account */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4, duration: 0.2 }}
+                  className="p-5 rounded-2xl bg-destructive/5 border border-destructive/20"
+                >
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-lg bg-destructive/10 flex items-center justify-center">
+                      <Trash2 className="w-5 h-5 text-destructive" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-destructive">Delete Account</h3>
+                      <p className="text-sm text-muted-foreground">Permanently delete your account and all data</p>
+                    </div>
+                  </div>
+                  
+                  <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 mb-4">
+                    <p className="text-sm text-destructive flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                      <span>
+                        This action is permanent and cannot be undone. All your pets, posts, comments, 
+                        and profile data will be permanently deleted.
+                      </span>
+                    </p>
+                  </div>
+
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" className="w-full sm:w-auto">
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete My Account
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                          <AlertTriangle className="w-5 h-5" />
+                          Delete Account Permanently?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="space-y-3">
+                          <p>
+                            This will permanently delete your account and all associated data including:
+                          </p>
+                          <ul className="list-disc list-inside text-sm space-y-1">
+                            <li>Your profile and settings</li>
+                            <li>All your pets</li>
+                            <li>All your posts and comments</li>
+                            <li>Your likes and bookmarks</li>
+                          </ul>
+                          <p className="font-medium">
+                            Type <span className="text-destructive font-bold">DELETE</span> to confirm:
+                          </p>
+                          <Input
+                            value={deleteConfirmText}
+                            onChange={(e) => setDeleteConfirmText(e.target.value)}
+                            placeholder="Type DELETE to confirm"
+                            className="mt-2"
+                          />
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setDeleteConfirmText("")}>
+                          Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleDeleteAccount}
+                          disabled={deleteConfirmText !== "DELETE" || isDeletingAccount}
+                          className="bg-destructive hover:bg-destructive/90"
+                        >
+                          {isDeletingAccount ? "Deleting..." : "Delete Forever"}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </motion.div>
               </div>
             </section>
