@@ -10,7 +10,7 @@ import {
   TrendingUp,
   Users
 } from "lucide-react";
-import type { ForumCategory } from "@/pages/Forum";
+import type { ForumCategory } from "@/pages/Community";
 
 interface ForumSidebarProps {
   selectedCategory: ForumCategory;
