@@ -160,12 +160,16 @@ const UserProfile = () => {
                   {pets.map((pet) => {
                     const PetIcon = petTypeIcons[pet.type] || Sparkles;
                     return (
-                      <div key={pet.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                      <div 
+                        key={pet.id} 
+                        className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 cursor-pointer hover:bg-muted transition-colors"
+                        onClick={() => navigate(`/pet/${pet.id}`)}
+                      >
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
                           <PetIcon className="w-5 h-5 text-primary-foreground" />
                         </div>
                         <div>
-                          <p className="font-medium">{pet.name}</p>
+                          <p className="font-medium hover:text-primary transition-colors">{pet.name}</p>
                           <p className="text-xs text-muted-foreground capitalize">
                             {pet.breed || pet.type}
                             {pet.age_years && ` • ${pet.age_years} yrs`}
