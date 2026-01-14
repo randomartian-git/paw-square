@@ -17,6 +17,7 @@ import AIAssistant from "./pages/AIAssistant";
 import PostDetail from "./pages/PostDetail";
 import AddPet from "./pages/AddPet";
 import CreatePost from "./pages/CreatePost";
+import EditPost from "./pages/EditPost";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +42,7 @@ const App = () => (
               <Route path="/post/:postId" element={<PostDetail />} />
               <Route path="/add-pet" element={<AddPet />} />
               <Route path="/create-post" element={<CreatePost />} />
+              <Route path="/edit-post/:postId" element={<EditPost />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
