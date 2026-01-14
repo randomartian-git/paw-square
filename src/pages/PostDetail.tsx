@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Heart, MessageCircle, Share2, Send, Clock, Bookmark, ArrowLeft } from "lucide-react";
+import { Heart, MessageCircle, Share2, Send, Clock, Bookmark, ArrowLeft, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,6 +11,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDistanceToNow } from "date-fns";
 import Navbar from "@/components/Navbar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Comment {
   id: string;
@@ -230,6 +241,42 @@ const PostDetail = () => {
     setIsSubmitting(false);
   };
 
+  const handleDeletePost = async () => {
+    if (!user || !post || user.id !== post.user_id) return;
+
+    // Delete associated likes, comments, and bookmarks first
+    await Promise.all([
+      supabase.from("likes").delete().eq("post_id", post.id),
+      supabase.from("bookmarks").delete().eq("post_id", post.id),
+      supabase.from("comments").delete().eq("post_id", post.id),
+    ]);
+
+    const { error } = await supabase.from("posts").delete().eq("id", post.id);
+    
+    if (error) {
+      toast({ title: "Error deleting post", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Post deleted" });
+      navigate("/community");
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!user) return;
+    
+    // Delete associated likes first
+    await supabase.from("likes").delete().eq("comment_id", commentId);
+    
+    const { error } = await supabase.from("comments").delete().eq("id", commentId);
+    
+    if (error) {
+      toast({ title: "Error deleting comment", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Comment deleted" });
+      setComments(prev => prev.filter(c => c.id !== commentId));
+    }
+  };
+
   const handleShare = async () => {
     const url = `${window.location.origin}/post/${post?.id}`;
     try {
@@ -371,6 +418,30 @@ const PostDetail = () => {
               >
                 <Bookmark className={`w-5 h-5 ${isBookmarked ? "fill-current" : ""}`} />
               </motion.button>
+
+              {user?.id === post.user_id && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <button className="px-4 py-2 rounded-lg hover:bg-destructive/10 text-destructive transition-colors">
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Post</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete your post and all associated comments.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDeletePost} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
             </div>
           </motion.article>
 
@@ -452,16 +523,42 @@ const PostDetail = () => {
                           </span>
                         </div>
                         <p className="text-foreground">{comment.content}</p>
-                        <motion.button
-                          whileTap={{ scale: 0.9 }}
-                          onClick={() => handleLikeComment(comment.id)}
-                          className={`flex items-center gap-1 mt-2 text-sm transition-colors ${
-                            comment.isLiked ? "text-accent" : "text-muted-foreground hover:text-accent"
-                          }`}
-                        >
-                          <Heart className={`w-4 h-4 ${comment.isLiked ? "fill-current" : ""}`} />
-                          {comment.likes_count > 0 && comment.likes_count}
-                        </motion.button>
+                        <div className="flex items-center gap-2 mt-2">
+                          <motion.button
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => handleLikeComment(comment.id)}
+                            className={`flex items-center gap-1 text-sm transition-colors ${
+                              comment.isLiked ? "text-accent" : "text-muted-foreground hover:text-accent"
+                            }`}
+                          >
+                            <Heart className={`w-4 h-4 ${comment.isLiked ? "fill-current" : ""}`} />
+                            {comment.likes_count > 0 && comment.likes_count}
+                          </motion.button>
+
+                          {user?.id === comment.user_id && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <button className="flex items-center gap-1 text-sm text-muted-foreground hover:text-destructive transition-colors">
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Comment</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete your comment.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDeleteComment(comment.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </motion.div>
