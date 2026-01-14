@@ -185,6 +185,7 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          image_url: string | null
           likes_count: number
           pet_type: string | null
           tags: string[] | null
@@ -199,6 +200,7 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          image_url?: string | null
           likes_count?: number
           pet_type?: string | null
           tags?: string[] | null
@@ -213,6 +215,7 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          image_url?: string | null
           likes_count?: number
           pet_type?: string | null
           tags?: string[] | null
