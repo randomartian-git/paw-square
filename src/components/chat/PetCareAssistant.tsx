@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, X, Send, Bot, User, Loader2, Sparkles, PawPrint } from "lucide-react";
+import { X, Send, Bot, User, Loader2, Sparkles, PawPrint } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Message {
   role: "user" | "assistant";
@@ -20,6 +22,7 @@ const PetCareAssistant = () => {
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -28,11 +31,18 @@ const PetCareAssistant = () => {
   }, [messages]);
 
   const streamChat = async (userMessages: Message[]) => {
+    // Get user session for authentication
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      throw new Error("Please sign in to use the AI assistant");
+    }
+
     const resp = await fetch(CHAT_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        Authorization: `Bearer ${session.access_token}`,
       },
       body: JSON.stringify({ messages: userMessages }),
     });
@@ -93,6 +103,16 @@ const PetCareAssistant = () => {
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
+    // Check if user is authenticated
+    if (!user) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to use the AI Pet Care Assistant.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const userMessage: Message = { role: "user", content: input.trim() };
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
@@ -103,11 +123,30 @@ const PetCareAssistant = () => {
       await streamChat(newMessages);
     } catch (error) {
       console.error("Chat error:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to get response",
-        variant: "destructive",
-      });
+      
+      const errorMessage = error instanceof Error ? error.message : "Failed to get response";
+      
+      // Handle specific error cases
+      if (errorMessage.includes("Rate limit exceeded")) {
+        toast({
+          title: "Rate Limit Reached",
+          description: "You've reached the hourly limit (20 messages). Please try again later.",
+          variant: "destructive",
+        });
+      } else if (errorMessage.includes("sign in") || errorMessage.includes("Authentication")) {
+        toast({
+          title: "Authentication Required",
+          description: "Please sign in to use the AI assistant.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
+      
       // Remove failed message
       setMessages(messages);
     } finally {
@@ -177,6 +216,11 @@ const PetCareAssistant = () => {
                   <p className="text-sm text-muted-foreground">
                     I'm your AI Pet Care Assistant. Ask me anything about pet health, nutrition, training, or care!
                   </p>
+                  {!user && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                      Sign in to start chatting
+                    </p>
+                  )}
                   <div className="mt-4 space-y-2">
                     {[
                       "What should I feed my puppy?",
@@ -186,7 +230,8 @@ const PetCareAssistant = () => {
                       <button
                         key={suggestion}
                         onClick={() => setInput(suggestion)}
-                        className="block w-full text-left text-sm px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors text-foreground"
+                        disabled={!user}
+                        className="block w-full text-left text-sm px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {suggestion}
                       </button>
@@ -247,13 +292,14 @@ const PetCareAssistant = () => {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Ask about pet care..."
+                  placeholder={user ? "Ask about pet care..." : "Sign in to chat..."}
                   className="min-h-[44px] max-h-[120px] resize-none"
                   rows={1}
+                  disabled={!user}
                 />
                 <Button
                   onClick={handleSend}
-                  disabled={!input.trim() || isLoading}
+                  disabled={!input.trim() || isLoading || !user}
                   size="icon"
                   className="shrink-0 bg-gradient-to-r from-primary to-accent"
                 >
