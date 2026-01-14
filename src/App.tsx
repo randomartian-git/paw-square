@@ -13,7 +13,7 @@ import UserProfile from "./pages/UserProfile";
 import About from "./pages/About";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
-import AppLayout from "./components/layout/AppLayout";
+import AIAssistant from "./pages/AIAssistant";
 
 const queryClient = new QueryClient();
 
@@ -25,19 +25,18 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <AppLayout>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/forum" element={<Community />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/community" element={<Community />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/profile/:userId" element={<UserProfile />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </AppLayout>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/forum" element={<Community />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/community" element={<Community />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/profile/:userId" element={<UserProfile />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/ai-assistant" element={<AIAssistant />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
           </BrowserRouter>
         </TooltipProvider>
       </AuthProvider>
