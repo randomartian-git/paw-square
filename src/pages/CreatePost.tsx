@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ArrowLeft, HelpCircle, MessageSquare, Lightbulb, Camera, AlertTriangle,
-  Dog, Cat, Bird, Fish, Rabbit, Sparkles
+  Dog, Cat, Bird, Fish, Rabbit, Sparkles, Upload, X, Image as ImageIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,6 +45,9 @@ const CreatePost = () => {
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -62,6 +65,56 @@ const CreatePost = () => {
 
   const handleRemoveTag = (tagToRemove: string) => {
     setTags(tags.filter(t => t !== tagToRemove));
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Please select an image file", variant: "destructive" });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Image must be less than 5MB", variant: "destructive" });
+      return;
+    }
+
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setImagePreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+  };
+
+  const uploadImage = async (): Promise<string | null> => {
+    if (!imageFile || !user) return null;
+
+    setUploadingImage(true);
+    const fileExt = imageFile.name.split(".").pop();
+    const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+    const { error } = await supabase.storage
+      .from("post-images")
+      .upload(fileName, imageFile);
+
+    setUploadingImage(false);
+
+    if (error) {
+      toast({ title: "Error uploading image", description: error.message, variant: "destructive" });
+      return null;
+    }
+
+    const { data: urlData } = supabase.storage
+      .from("post-images")
+      .getPublicUrl(fileName);
+
+    return urlData.publicUrl;
   };
 
   const handleSubmit = async () => {
@@ -86,6 +139,11 @@ const CreatePost = () => {
 
     setLoading(true);
 
+    let imageUrl: string | null = null;
+    if (imageFile && (category === "photo" || category === "showcase")) {
+      imageUrl = await uploadImage();
+    }
+
     const { error } = await supabase.from("posts").insert({
       user_id: user.id,
       title: title.trim(),
@@ -94,6 +152,7 @@ const CreatePost = () => {
       pet_type: petType || null,
       topic: topic || null,
       tags: tags.length > 0 ? tags : null,
+      image_url: imageUrl,
     });
 
     if (error) {
@@ -283,6 +342,49 @@ const CreatePost = () => {
                       <p className="text-xs text-muted-foreground mt-1">{content.length}/5000</p>
                     </div>
 
+                    {/* Image Upload for Photo/Showcase category */}
+                    {category === "photo" && (
+                      <div>
+                        <Label className="text-base font-semibold mb-2 block">
+                          Add Photo
+                        </Label>
+                        {imagePreview ? (
+                          <div className="relative">
+                            <img 
+                              src={imagePreview} 
+                              alt="Preview" 
+                              className="w-full max-h-64 object-cover rounded-xl"
+                            />
+                            <button
+                              type="button"
+                              onClick={removeImage}
+                              className="absolute top-2 right-2 p-1.5 bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/90"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-colors">
+                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                              <Upload className="w-8 h-8 text-muted-foreground mb-2" />
+                              <p className="text-sm text-muted-foreground">
+                                Click to upload an image
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                PNG, JPG up to 5MB
+                              </p>
+                            </div>
+                            <input 
+                              type="file" 
+                              className="hidden" 
+                              accept="image/*"
+                              onChange={handleImageSelect}
+                            />
+                          </label>
+                        )}
+                      </div>
+                    )}
+
                     <div className="flex justify-between">
                       <Button variant="ghost" onClick={() => setStep(1)}>
                         Back
@@ -338,6 +440,13 @@ const CreatePost = () => {
                     {/* Preview */}
                     <div className="bg-muted/50 rounded-xl p-4">
                       <p className="text-sm text-muted-foreground mb-2">Preview</p>
+                      {imagePreview && (
+                        <img 
+                          src={imagePreview} 
+                          alt="Preview" 
+                          className="w-full max-h-40 object-cover rounded-lg mb-3"
+                        />
+                      )}
                       <div className="flex gap-2 mb-2">
                         <Badge className="capitalize">{category}</Badge>
                         {petType && <Badge variant="outline" className="capitalize">{petType}</Badge>}
@@ -353,10 +462,10 @@ const CreatePost = () => {
                       </Button>
                       <Button
                         onClick={handleSubmit}
-                        disabled={loading}
+                        disabled={loading || uploadingImage}
                         className="bg-gradient-to-r from-primary to-accent"
                       >
-                        {loading ? "Posting..." : "Share with Community"}
+                        {loading || uploadingImage ? "Posting..." : "Share with Community"}
                       </Button>
                     </div>
                   </motion.div>
