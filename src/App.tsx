@@ -10,9 +10,11 @@ import Forum from "./pages/Forum";
 import Auth from "./pages/Auth";
 import Community from "./pages/Community";
 import Profile from "./pages/Profile";
+import UserProfile from "./pages/UserProfile";
 import About from "./pages/About";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import PetCareAssistant from "./components/chat/PetCareAssistant";
 
 const queryClient = new QueryClient();
 
@@ -30,10 +32,12 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/community" element={<Community />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/profile/:userId" element={<UserProfile />} />
               <Route path="/about" element={<About />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <PetCareAssistant />
           </BrowserRouter>
         </TooltipProvider>
       </AuthProvider>
