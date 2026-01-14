@@ -46,6 +46,7 @@ interface Post {
   comments_count: number;
   created_at: string;
   user_id: string;
+  image_url: string | null;
   author?: {
     display_name: string | null;
     avatar_url: string | null;
@@ -377,6 +378,17 @@ const PostDetail = () => {
               <Badge variant="outline" className="mb-3 capitalize">{post.category}</Badge>
               <h1 className="text-2xl font-display font-bold">{post.title}</h1>
             </div>
+
+            {/* Post Image */}
+            {post.image_url && (
+              <div className="p-6 border-b border-border">
+                <img 
+                  src={post.image_url} 
+                  alt={post.title}
+                  className="w-full max-h-[500px] object-contain rounded-xl bg-muted"
+                />
+              </div>
+            )}
 
             {/* Post Content */}
             <div className="p-6 border-b border-border">

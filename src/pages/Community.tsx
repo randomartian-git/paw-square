@@ -30,6 +30,7 @@ type Post = {
   comments_count: number;
   created_at: string;
   user_id: string;
+  image_url: string | null;
   profiles?: {
     display_name: string | null;
     avatar_url: string | null;
@@ -588,6 +589,17 @@ const PostCard = ({ post, index, isLiked, isBookmarked, onLike, onBookmark }: Po
           <h3 className="font-display font-semibold text-lg text-foreground group-hover:text-primary transition-colors mb-2 line-clamp-2">
             {post.title}
           </h3>
+
+          {/* Post Image */}
+          {post.image_url && (
+            <div className="mb-4 -mx-2 sm:mx-0">
+              <img 
+                src={post.image_url} 
+                alt={post.title}
+                className="w-full max-h-64 object-cover rounded-xl"
+              />
+            </div>
+          )}
 
           {/* Content Preview */}
           <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
