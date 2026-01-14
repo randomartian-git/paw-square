@@ -139,16 +139,16 @@ const CreatePostDialog = ({ isOpen, onClose, onPostCreated }: CreatePostDialogPr
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
+        className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm"
         onClick={handleClose}
+      />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        transition={{ type: "spring", damping: 25, stiffness: 300 }}
+        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-card w-[95vw] max-w-2xl rounded-2xl border border-border shadow-elevated max-h-[90vh] overflow-y-auto"
       >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          onClick={(e) => e.stopPropagation()}
-          className="bg-card w-full max-w-2xl rounded-2xl border border-border shadow-elevated max-h-[90vh] overflow-y-auto"
-        >
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-border sticky top-0 bg-card z-10">
             <div>
@@ -361,7 +361,6 @@ const CreatePostDialog = ({ isOpen, onClose, onPostCreated }: CreatePostDialogPr
             </AnimatePresence>
           </div>
         </motion.div>
-      </motion.div>
     </AnimatePresence>
   );
 };

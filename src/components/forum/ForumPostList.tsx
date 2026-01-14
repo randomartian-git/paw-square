@@ -20,7 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import PostDetailModal from "@/components/post/PostDetailModal";
-import type { ForumCategory } from "@/pages/Forum";
+import type { ForumCategory } from "@/pages/Community";
 
 interface ForumPostListProps {
   selectedCategory: ForumCategory;

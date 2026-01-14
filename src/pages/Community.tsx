@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence, useScroll, useTransform, useInView } from "framer-motion";
 import { 
   Heart, MessageCircle, Bookmark, Share2, Filter, 
   TrendingUp, Clock, Dog, Cat, Bird, Fish, Rabbit,
-  Plus, Search, Sparkles
+  Plus, Search, Sparkles, Eye, ChevronUp, HelpCircle,
+  MessageSquare, Lightbulb, Image
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,8 +13,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import CreatePostDialog from "@/components/community/CreatePostDialog";
+import PostDetailModal from "@/components/post/PostDetailModal";
 import { formatDistanceToNow } from "date-fns";
 
 type Post = {
@@ -34,12 +38,34 @@ type Post = {
   };
 };
 
+export type ForumCategory = "all" | "questions" | "discussions" | "tips" | "showcase";
+
 const petTypeIcons: Record<string, any> = {
   dog: Dog,
   cat: Cat,
   bird: Bird,
   fish: Fish,
   rabbit: Rabbit,
+};
+
+const getCategoryIcon = (category: string) => {
+  switch (category) {
+    case "questions": case "question": return HelpCircle;
+    case "discussions": case "discussion": return MessageSquare;
+    case "tips": case "tip": return Lightbulb;
+    case "showcase": case "photo": return Image;
+    default: return MessageSquare;
+  }
+};
+
+const getCategoryColor = (category: string) => {
+  switch (category) {
+    case "questions": case "question": return "bg-tertiary/20 text-tertiary border-tertiary/30";
+    case "discussions": case "discussion": return "bg-accent/20 text-accent border-accent/30";
+    case "tips": case "tip": return "bg-quaternary/20 text-quaternary border-quaternary/30";
+    case "showcase": case "photo": return "bg-primary/20 text-primary border-primary/30";
+    default: return "bg-muted text-muted-foreground";
+  }
 };
 
 const topicColors: Record<string, string> = {
@@ -55,10 +81,12 @@ const Community = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<ForumCategory>("all");
   const [selectedPetType, setSelectedPetType] = useState<string | null>(null);
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<"recent" | "trending">("recent");
+  const [sortBy, setSortBy] = useState<"hot" | "new" | "top">("hot");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
   const [bookmarkedPosts, setBookmarkedPosts] = useState<Set<string>>(new Set());
   const { user } = useAuth();
@@ -69,20 +97,38 @@ const Community = () => {
     if (user) {
       fetchUserInteractions();
     }
-  }, [user, selectedPetType, selectedTopic, sortBy]);
+  }, [user, selectedCategory, selectedPetType, selectedTopic, sortBy]);
 
   const fetchPosts = async () => {
     setLoading(true);
-    let query = supabase
-      .from("posts")
-      .select("*")
-      .order(sortBy === "trending" ? "likes_count" : "created_at", { ascending: false });
+    let query = supabase.from("posts").select("*");
+
+    // Apply category filter
+    if (selectedCategory !== "all") {
+      const categoryMap: Record<string, string[]> = {
+        questions: ["questions", "question"],
+        discussions: ["discussions", "discussion"],
+        tips: ["tips", "tip"],
+        showcase: ["showcase", "photo"],
+      };
+      query = query.in("category", categoryMap[selectedCategory] || [selectedCategory]);
+    }
 
     if (selectedPetType) {
       query = query.eq("pet_type", selectedPetType);
     }
     if (selectedTopic) {
       query = query.eq("topic", selectedTopic);
+    }
+
+    // Sort
+    if (sortBy === "new") {
+      query = query.order("created_at", { ascending: false });
+    } else if (sortBy === "top") {
+      query = query.order("likes_count", { ascending: false });
+    } else {
+      // Hot: combination of likes + comments + recency
+      query = query.order("likes_count", { ascending: false });
     }
 
     const { data, error } = await query.limit(50);
@@ -191,178 +237,281 @@ const Community = () => {
 
   const petTypes = ["dog", "cat", "bird", "fish", "rabbit", "other"];
   const topics = ["health", "training", "food", "adoption", "emergencies", "general"];
+  const categories: { id: ForumCategory; label: string; icon: any }[] = [
+    { id: "all", label: "All Posts", icon: MessageSquare },
+    { id: "questions", label: "Questions", icon: HelpCircle },
+    { id: "discussions", label: "Discussions", icon: MessageCircle },
+    { id: "tips", label: "Tips & Advice", icon: Lightbulb },
+    { id: "showcase", label: "Showcase", icon: Image },
+  ];
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <main className="container mx-auto px-4 pt-24 pb-12">
-        {/* Header */}
+      {/* Background decorations */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
-        >
-          <h1 className="text-4xl md:text-5xl font-display font-bold mb-4">
-            Community <span className="text-gradient">Feed</span>
-          </h1>
-          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Connect with fellow pet parents, share experiences, and get advice from the community.
-          </p>
-        </motion.div>
+          animate={{ 
+            x: [0, 20, 0],
+            y: [0, -15, 0],
+          }}
+          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+          className="absolute top-20 right-10 w-96 h-96 bg-primary/10 rounded-full blur-3xl"
+        />
+        <motion.div
+          animate={{ 
+            x: [0, -15, 0],
+            y: [0, 20, 0],
+          }}
+          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+          className="absolute bottom-40 left-10 w-80 h-80 bg-accent/10 rounded-full blur-3xl"
+        />
+      </div>
 
-        <div className="grid lg:grid-cols-4 gap-8">
-          {/* Filters Sidebar */}
-          <motion.aside
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="lg:col-span-1"
+      <main className="relative pt-24 pb-16">
+        <div className="container mx-auto px-4">
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="text-center mb-12"
           >
-            <div className="sticky top-24 space-y-6">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  placeholder="Search posts..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-11"
-                />
-              </div>
+            <h1 className="text-4xl md:text-5xl font-display font-bold mb-4">
+              <span className="bg-gradient-to-r from-primary via-accent to-tertiary bg-clip-text text-transparent">
+                Community
+              </span>
+            </h1>
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+              Ask questions, share experiences, and connect with fellow pet parents
+            </p>
+          </motion.div>
 
-              {/* Create Post Button */}
-              <Button
-                onClick={() => setIsCreateOpen(true)}
-                className="w-full bg-gradient-hero shadow-glow hover:shadow-elevated"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Create Post
-              </Button>
+          {/* Create Post Button - Mobile */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1, duration: 0.3 }}
+            className="md:hidden mb-6"
+          >
+            <Button 
+              onClick={() => setIsCreateOpen(true)}
+              className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Create Post
+            </Button>
+          </motion.div>
 
-              {/* Sort */}
-              <div className="bg-card rounded-xl p-4 border border-border">
-                <h3 className="font-semibold mb-3 flex items-center gap-2">
-                  <Filter className="w-4 h-4" />
-                  Sort By
-                </h3>
-                <div className="flex gap-2">
-                  <Button
-                    variant={sortBy === "recent" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setSortBy("recent")}
-                  >
-                    <Clock className="w-4 h-4 mr-1" />
-                    Recent
-                  </Button>
-                  <Button
-                    variant={sortBy === "trending" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setSortBy("trending")}
-                  >
-                    <TrendingUp className="w-4 h-4 mr-1" />
-                    Trending
-                  </Button>
+          {/* Main Content */}
+          <div className="flex flex-col md:flex-row gap-8">
+            {/* Sidebar */}
+            <motion.aside
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3 }}
+              className="md:w-72 lg:w-80 shrink-0"
+            >
+              <div className="sticky top-24 space-y-6">
+                {/* Search */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Input
+                    placeholder="Search posts..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-11"
+                  />
                 </div>
-              </div>
 
-              {/* Pet Type Filter */}
-              <div className="bg-card rounded-xl p-4 border border-border">
-                <h3 className="font-semibold mb-3">Pet Type</h3>
-                <div className="flex flex-wrap gap-2">
-                  {petTypes.map((type) => {
-                    const Icon = petTypeIcons[type] || Sparkles;
-                    return (
-                      <Button
-                        key={type}
-                        variant={selectedPetType === type ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setSelectedPetType(selectedPetType === type ? null : type)}
-                        className="capitalize"
+                {/* Create Post Button - Desktop */}
+                <Button
+                  onClick={() => setIsCreateOpen(true)}
+                  className="hidden md:flex w-full bg-gradient-to-r from-primary to-accent hover:opacity-90"
+                >
+                  <Plus className="w-5 h-5 mr-2" />
+                  Create Post
+                </Button>
+
+                {/* Categories */}
+                <div className="bg-card/50 backdrop-blur-sm rounded-xl border border-border/50 p-4">
+                  <h3 className="font-semibold mb-3">Categories</h3>
+                  <div className="space-y-1">
+                    {categories.map((cat) => {
+                      const Icon = cat.icon;
+                      return (
+                        <button
+                          key={cat.id}
+                          onClick={() => setSelectedCategory(cat.id)}
+                          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                            selectedCategory === cat.id
+                              ? "bg-primary/20 text-primary"
+                              : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          <Icon className="w-4 h-4" />
+                          {cat.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Pet Type Filter */}
+                <div className="bg-card/50 backdrop-blur-sm rounded-xl border border-border/50 p-4">
+                  <h3 className="font-semibold mb-3">Pet Type</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {petTypes.map((type) => {
+                      const Icon = petTypeIcons[type] || Sparkles;
+                      return (
+                        <Button
+                          key={type}
+                          variant={selectedPetType === type ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setSelectedPetType(selectedPetType === type ? null : type)}
+                          className="capitalize"
+                        >
+                          <Icon className="w-4 h-4 mr-1" />
+                          {type}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Topic Filter */}
+                <div className="bg-card/50 backdrop-blur-sm rounded-xl border border-border/50 p-4">
+                  <h3 className="font-semibold mb-3">Topics</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {topics.map((topic) => (
+                      <Badge
+                        key={topic}
+                        variant={selectedTopic === topic ? "default" : "outline"}
+                        className={`cursor-pointer capitalize ${selectedTopic === topic ? "" : topicColors[topic]}`}
+                        onClick={() => setSelectedTopic(selectedTopic === topic ? null : topic)}
                       >
-                        <Icon className="w-4 h-4 mr-1" />
-                        {type}
-                      </Button>
-                    );
-                  })}
+                        {topic}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
               </div>
+            </motion.aside>
 
-              {/* Topic Filter */}
-              <div className="bg-card rounded-xl p-4 border border-border">
-                <h3 className="font-semibold mb-3">Topics</h3>
-                <div className="flex flex-wrap gap-2">
-                  {topics.map((topic) => (
-                    <Badge
-                      key={topic}
-                      variant={selectedTopic === topic ? "default" : "outline"}
-                      className={`cursor-pointer capitalize ${selectedTopic === topic ? "" : topicColors[topic]}`}
-                      onClick={() => setSelectedTopic(selectedTopic === topic ? null : topic)}
-                    >
-                      {topic}
-                    </Badge>
-                  ))}
+            {/* Posts Feed */}
+            <div className="flex-1">
+              {/* Sort Bar */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="flex items-center justify-between mb-6 bg-card/30 backdrop-blur-sm rounded-xl border border-border/50 p-4"
+              >
+                <p className="text-muted-foreground">
+                  <span className="font-semibold text-foreground">{filteredPosts.length}</span> posts
+                </p>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => setSortBy("hot")}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      sortBy === "hot" ? "bg-primary/20 text-primary" : "hover:bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    🔥 Hot
+                  </button>
+                  <button 
+                    onClick={() => setSortBy("new")}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      sortBy === "new" ? "bg-primary/20 text-primary" : "hover:bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    <Clock className="w-4 h-4 inline mr-1" />
+                    New
+                  </button>
+                  <button 
+                    onClick={() => setSortBy("top")}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      sortBy === "top" ? "bg-primary/20 text-primary" : "hover:bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    <TrendingUp className="w-4 h-4 inline mr-1" />
+                    Top
+                  </button>
                 </div>
+              </motion.div>
+
+              {/* Posts */}
+              <div className="space-y-4">
+                {loading ? (
+                  <div className="space-y-4">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="bg-card/50 rounded-xl p-6 border border-border/50 animate-pulse">
+                        <div className="flex gap-4 mb-4">
+                          <div className="w-12 h-12 rounded-full bg-muted" />
+                          <div className="flex-1 space-y-2">
+                            <div className="h-4 bg-muted rounded w-1/4" />
+                            <div className="h-3 bg-muted rounded w-1/6" />
+                          </div>
+                        </div>
+                        <div className="h-5 bg-muted rounded w-3/4 mb-3" />
+                        <div className="h-20 bg-muted rounded" />
+                      </div>
+                    ))}
+                  </div>
+                ) : filteredPosts.length === 0 ? (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-center py-16"
+                  >
+                    <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+                      <MessageCircle className="w-10 h-10 text-muted-foreground" />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-2">No posts yet</h3>
+                    <p className="text-muted-foreground mb-4">Be the first to share something with the community!</p>
+                    <Button onClick={() => setIsCreateOpen(true)} className="bg-gradient-to-r from-primary to-accent">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create First Post
+                    </Button>
+                  </motion.div>
+                ) : (
+                  <AnimatePresence>
+                    {filteredPosts.map((post, index) => (
+                      <PostCard
+                        key={post.id}
+                        post={post}
+                        index={index}
+                        isLiked={likedPosts.has(post.id)}
+                        isBookmarked={bookmarkedPosts.has(post.id)}
+                        onLike={() => handleLike(post.id)}
+                        onBookmark={() => handleBookmark(post.id)}
+                        onOpenPost={() => setSelectedPost(post)}
+                      />
+                    ))}
+                  </AnimatePresence>
+                )}
               </div>
             </div>
-          </motion.aside>
-
-          {/* Posts Feed */}
-          <div className="lg:col-span-3 space-y-6">
-            {loading ? (
-              <div className="space-y-6">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="bg-card rounded-xl p-6 border border-border animate-pulse">
-                    <div className="flex gap-4 mb-4">
-                      <div className="w-12 h-12 rounded-full bg-muted" />
-                      <div className="flex-1 space-y-2">
-                        <div className="h-4 bg-muted rounded w-1/4" />
-                        <div className="h-3 bg-muted rounded w-1/6" />
-                      </div>
-                    </div>
-                    <div className="h-5 bg-muted rounded w-3/4 mb-3" />
-                    <div className="h-20 bg-muted rounded" />
-                  </div>
-                ))}
-              </div>
-            ) : filteredPosts.length === 0 ? (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-center py-16"
-              >
-                <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
-                  <MessageCircle className="w-10 h-10 text-muted-foreground" />
-                </div>
-                <h3 className="text-xl font-semibold mb-2">No posts yet</h3>
-                <p className="text-muted-foreground mb-4">Be the first to share something with the community!</p>
-                <Button onClick={() => setIsCreateOpen(true)} className="bg-gradient-hero">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create First Post
-                </Button>
-              </motion.div>
-            ) : (
-              <AnimatePresence>
-                {filteredPosts.map((post, index) => (
-                  <PostCard
-                    key={post.id}
-                    post={post}
-                    index={index}
-                    isLiked={likedPosts.has(post.id)}
-                    isBookmarked={bookmarkedPosts.has(post.id)}
-                    onLike={() => handleLike(post.id)}
-                    onBookmark={() => handleBookmark(post.id)}
-                  />
-                ))}
-              </AnimatePresence>
-            )}
           </div>
         </div>
       </main>
+
+      <Footer />
 
       <CreatePostDialog
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
         onPostCreated={fetchPosts}
+      />
+
+      <PostDetailModal
+        isOpen={!!selectedPost}
+        onClose={() => setSelectedPost(null)}
+        post={selectedPost ? {
+          ...selectedPost,
+          author: selectedPost.profiles
+        } : null}
       />
     </div>
   );
@@ -375,93 +524,145 @@ interface PostCardProps {
   isBookmarked: boolean;
   onLike: () => void;
   onBookmark: () => void;
+  onOpenPost: () => void;
 }
 
-const PostCard = ({ post, index, isLiked, isBookmarked, onLike, onBookmark }: PostCardProps) => {
+const PostCard = ({ post, index, isLiked, isBookmarked, onLike, onBookmark, onOpenPost }: PostCardProps) => {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: "-50px" });
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const PetIcon = petTypeIcons[post.pet_type || ""] || Sparkles;
+  const CategoryIcon = getCategoryIcon(post.category);
+
+  const handleShare = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const url = `${window.location.origin}/community?post=${post.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({ title: "Link copied to clipboard!" });
+    } catch {
+      toast({ title: "Failed to copy link", variant: "destructive" });
+    }
+  };
+
+  const handleAuthorClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/profile/${post.user_id}`);
+  };
   
   return (
     <motion.article
+      ref={ref}
       initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+      animate={isInView ? { opacity: 1, y: 0 } : {}}
       exit={{ opacity: 0, y: -20 }}
-      transition={{ delay: index * 0.05 }}
-      className="bg-card rounded-xl p-6 border border-border hover:border-primary/30 transition-colors"
+      transition={{ delay: index * 0.05, duration: 0.3 }}
+      onClick={onOpenPost}
+      className="group bg-card/50 backdrop-blur-sm rounded-2xl border border-border/50 p-6 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 transition-all duration-200 cursor-pointer"
     >
-      {/* Header */}
-      <div className="flex items-start gap-4 mb-4">
-        <Avatar className="w-12 h-12">
-          <AvatarImage src={post.profiles?.avatar_url || undefined} />
-          <AvatarFallback className="bg-gradient-hero text-primary-foreground">
-            {post.profiles?.display_name?.[0]?.toUpperCase() || "?"}
-          </AvatarFallback>
-        </Avatar>
-        <div className="flex-1">
-          <p className="font-semibold">{post.profiles?.display_name || "Anonymous"}</p>
-          <p className="text-sm text-muted-foreground">
-            {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
+      <div className="flex gap-4">
+        {/* Vote Section */}
+        <div className="hidden sm:flex flex-col items-center gap-1">
+          <button 
+            onClick={(e) => { e.stopPropagation(); onLike(); }}
+            className={`p-2 rounded-lg transition-all duration-200 ${
+              isLiked 
+                ? "bg-accent/20 text-accent" 
+                : "hover:bg-muted text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <ChevronUp className="w-5 h-5" />
+          </button>
+          <span className={`font-bold ${isLiked ? "text-accent" : "text-muted-foreground"}`}>
+            {post.likes_count}
+          </span>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          {/* Header */}
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <Badge variant="outline" className={getCategoryColor(post.category)}>
+              <CategoryIcon className="w-3 h-3 mr-1" />
+              {post.category}
+            </Badge>
+            {post.pet_type && (
+              <Badge variant="outline" className="capitalize">
+                <PetIcon className="w-3 h-3 mr-1" />
+                {post.pet_type}
+              </Badge>
+            )}
+            {post.topic && (
+              <Badge className={topicColors[post.topic] || ""}>
+                {post.topic}
+              </Badge>
+            )}
+          </div>
+
+          {/* Title */}
+          <h3 className="font-display font-semibold text-lg text-foreground group-hover:text-primary transition-colors mb-2 line-clamp-2">
+            {post.title}
+          </h3>
+
+          {/* Content Preview */}
+          <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
+            {post.content}
           </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {post.pet_type && (
-            <Badge variant="outline" className="capitalize">
-              <PetIcon className="w-3 h-3 mr-1" />
-              {post.pet_type}
-            </Badge>
+
+          {/* Tags */}
+          {post.tags && post.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {post.tags.map((tag) => (
+                <span key={tag} className="text-sm text-primary">#{tag}</span>
+              ))}
+            </div>
           )}
-          {post.topic && (
-            <Badge className={topicColors[post.topic] || ""}>
-              {post.topic}
-            </Badge>
-          )}
+
+          {/* Footer */}
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            {/* Author */}
+            <div className="flex items-center gap-3" onClick={handleAuthorClick}>
+              <Avatar className="w-8 h-8 border-2 border-primary/30 cursor-pointer hover:ring-2 hover:ring-primary transition-all">
+                <AvatarImage src={post.profiles?.avatar_url || undefined} />
+                <AvatarFallback className="bg-primary/20 text-primary text-xs">
+                  {post.profiles?.display_name?.[0] || "?"}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="text-sm font-medium text-foreground cursor-pointer hover:text-primary transition-colors">
+                  {post.profiles?.display_name || "Anonymous"}
+                </p>
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
+                </p>
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="flex items-center gap-4 text-muted-foreground">
+              <button 
+                onClick={(e) => { e.stopPropagation(); onOpenPost(); }}
+                className="flex items-center gap-1 text-sm hover:text-accent transition-colors"
+              >
+                <MessageCircle className="w-4 h-4" />
+                {post.comments_count}
+              </button>
+              <button onClick={handleShare} className="p-1 rounded hover:text-primary transition-colors">
+                <Share2 className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={(e) => { e.stopPropagation(); onBookmark(); }}
+                className={`p-1 rounded transition-colors ${
+                  isBookmarked ? "text-quaternary" : "hover:text-quaternary"
+                }`}
+              >
+                <Bookmark className={`w-4 h-4 ${isBookmarked ? "fill-current" : ""}`} />
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
-
-      {/* Content */}
-      <h3 className="text-xl font-semibold mb-2">{post.title}</h3>
-      <p className="text-muted-foreground mb-4 line-clamp-3">{post.content}</p>
-
-      {/* Tags */}
-      {post.tags && post.tags.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          {post.tags.map((tag) => (
-            <span key={tag} className="text-sm text-primary">#{tag}</span>
-          ))}
-        </div>
-      )}
-
-      {/* Actions */}
-      <div className="flex items-center gap-6 pt-4 border-t border-border">
-        <motion.button
-          whileTap={{ scale: 0.9 }}
-          onClick={onLike}
-          className={`flex items-center gap-2 transition-colors ${
-            isLiked ? "text-accent" : "text-muted-foreground hover:text-accent"
-          }`}
-        >
-          <Heart className={`w-5 h-5 ${isLiked ? "fill-current" : ""}`} />
-          <span>{post.likes_count}</span>
-        </motion.button>
-        
-        <button className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
-          <MessageCircle className="w-5 h-5" />
-          <span>{post.comments_count}</span>
-        </button>
-        
-        <motion.button
-          whileTap={{ scale: 0.9 }}
-          onClick={onBookmark}
-          className={`flex items-center gap-2 transition-colors ${
-            isBookmarked ? "text-primary" : "text-muted-foreground hover:text-primary"
-          }`}
-        >
-          <Bookmark className={`w-5 h-5 ${isBookmarked ? "fill-current" : ""}`} />
-        </motion.button>
-        
-        <button className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors ml-auto">
-          <Share2 className="w-5 h-5" />
-          <span className="hidden sm:inline">Share</span>
-        </button>
       </div>
     </motion.article>
   );

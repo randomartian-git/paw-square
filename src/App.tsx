@@ -6,7 +6,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import Index from "./pages/Index";
-import Forum from "./pages/Forum";
 import Auth from "./pages/Auth";
 import Community from "./pages/Community";
 import Profile from "./pages/Profile";
@@ -28,7 +27,7 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
-              <Route path="/forum" element={<Forum />} />
+              <Route path="/forum" element={<Community />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/community" element={<Community />} />
               <Route path="/profile" element={<Profile />} />

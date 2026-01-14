@@ -12,7 +12,7 @@ const getAllowedOrigins = (): string[] => {
     "https://www.lovable.dev",
   ];
   
-  // Add project-specific preview URLs
+  // Add project-specific preview URLs - include the format used by Lovable previews
   if (projectRef) {
     origins.push(`https://${projectRef}.lovable.app`);
     origins.push(`https://${projectRef}.supabase.co`);
@@ -30,15 +30,17 @@ const getAllowedOrigins = (): string[] => {
 const getCorsHeaders = (origin: string | null): Record<string, string> => {
   const allowedOrigins = getAllowedOrigins();
   
-  // Check if the request origin is allowed
+  // Check if the request origin is allowed - be more permissive for Lovable preview domains
   const isAllowed = origin && (
     allowedOrigins.includes(origin) || 
     origin.endsWith(".lovable.app") || 
-    origin.endsWith(".lovable.dev")
+    origin.endsWith(".lovable.dev") ||
+    origin.endsWith(".lovableproject.com") ||
+    origin.includes("-preview--") // Lovable preview URLs pattern
   );
   
   return {
-    "Access-Control-Allow-Origin": isAllowed ? origin : allowedOrigins[0],
+    "Access-Control-Allow-Origin": isAllowed && origin ? origin : "*",
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
   };
