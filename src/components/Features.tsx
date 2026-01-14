@@ -1,6 +1,4 @@
-import { motion, useScroll, useTransform, useInView } from "framer-motion";
 import { Users, MessageSquare, Calendar, MapPin, Heart, Shield } from "lucide-react";
-import { useRef } from "react";
 
 const features = [
   {
@@ -48,55 +46,17 @@ const features = [
 ];
 
 const Features = () => {
-  const containerRef = useRef(null);
-  const isInView = useInView(containerRef, { once: true, margin: "-100px" });
-  
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start end", "end start"]
-  });
-
-  // Enhanced multi-directional parallax
-  const y1 = useTransform(scrollYProgress, [0, 1], [150, -150]);
-  const y2 = useTransform(scrollYProgress, [0, 1], [-100, 200]);
-  const y3 = useTransform(scrollYProgress, [0, 1], [80, -120]);
-  const x1 = useTransform(scrollYProgress, [0, 1], [-100, 100]);
-  const x2 = useTransform(scrollYProgress, [0, 1], [120, -80]);
-  const x3 = useTransform(scrollYProgress, [0, 1], [-60, 60]);
-  const rotate1 = useTransform(scrollYProgress, [0, 1], [0, 90]);
-  const rotate2 = useTransform(scrollYProgress, [0, 1], [0, -60]);
-
   return (
-    <section id="discussions" className="py-20 relative overflow-hidden" ref={containerRef}>
-      {/* Enhanced animated background orbs with multi-directional movement */}
-      <motion.div 
-        className="absolute top-0 left-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl"
-        style={{ y: y1, x: x1, rotate: rotate1 }}
-      />
-      <motion.div 
-        className="absolute bottom-0 right-0 w-96 h-96 bg-accent/10 rounded-full blur-3xl"
-        style={{ y: y2, x: x2, rotate: rotate2 }}
-      />
-      <motion.div 
-        className="absolute top-1/2 left-1/2 w-64 h-64 bg-tertiary/5 rounded-full blur-3xl"
-        style={{ y: y3, x: x3, rotate: rotate1 }}
-      />
-      <motion.div 
-        className="absolute top-1/4 right-1/4 w-48 h-48 bg-quaternary/8 rounded-full blur-3xl"
-        style={{ y: y1, x: x2 }}
-      />
-      <motion.div 
-        className="absolute bottom-1/4 left-1/3 w-56 h-56 bg-primary/5 rounded-full blur-3xl"
-        style={{ y: y2, x: x1, rotate: rotate2 }}
-      />
+    <section id="discussions" className="py-20 relative overflow-hidden">
+      {/* Static background orbs */}
+      <div className="absolute top-0 left-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-accent/10 rounded-full blur-3xl" />
+      <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-tertiary/5 rounded-full blur-3xl" />
+      <div className="absolute top-1/4 right-1/4 w-48 h-48 bg-quaternary/8 rounded-full blur-3xl" />
+      <div className="absolute bottom-1/4 left-1/3 w-56 h-56 bg-primary/5 rounded-full blur-3xl" />
       
       <div className="container mx-auto px-4 relative z-10">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-16"
-        >
+        <div className="text-center mb-16">
           <h2 className="text-3xl sm:text-4xl font-display font-bold text-foreground mb-4">
             Everything You Need,{" "}
             <span className="text-gradient">One Community</span>
@@ -104,64 +64,31 @@ const Features = () => {
           <p className="text-muted-foreground max-w-2xl mx-auto">
             PawSquare brings together all the tools and connections you need to give your pet the best life
           </p>
-        </motion.div>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((feature, index) => {
-            // Multi-directional card movements
-            const directions = [
-              { y: y1, x: x1, rotate: rotate1 },
-              { y: y2, x: x2 },
-              { y: y3, x: x3, rotate: rotate2 },
-              { y: y1, x: x2 },
-              { y: y2, x: x1, rotate: rotate1 },
-              { y: y3, x: x2, rotate: rotate2 },
-            ];
-            const dir = directions[index % 6];
-            
-            // Different entrance directions
-            const entranceDirections = [
-              { x: -60, y: 40, rotate: -5 },
-              { x: 60, y: 30, rotate: 5 },
-              { x: 0, y: 70, rotate: 0 },
-              { x: -40, y: 50, rotate: -3 },
-              { x: 40, y: 60, rotate: 3 },
-              { x: 0, y: 80, rotate: 0 },
-            ];
-            const entrance = entranceDirections[index % 6];
-            
-            return (
-              <motion.div
-                key={feature.title}
-                initial={{ opacity: 0, y: entrance.y, x: entrance.x, rotate: entrance.rotate }}
-                animate={isInView ? { opacity: 1, y: 0, x: 0, rotate: 0 } : {}}
-                transition={{ delay: index * 0.1, duration: 0.7, type: "spring", stiffness: 80 }}
-                whileHover={{ y: -12, scale: 1.03, rotate: 0 }}
-                style={{ ...dir }}
-                className={`${feature.bgGlow} bg-card/80 backdrop-blur-sm p-6 rounded-2xl shadow-soft hover:shadow-elevated transition-all border border-border group relative overflow-hidden`}
-              >
-                {/* Gradient accent line */}
-                <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${feature.gradient} opacity-0 group-hover:opacity-100 transition-opacity`} />
-                
-                {/* Glow effect on hover */}
-                <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-5 transition-opacity rounded-2xl`} />
-                
-                <motion.div
-                  whileHover={{ rotate: [0, -10, 10, 0], scale: 1.15 }}
-                  transition={{ duration: 0.5 }}
-                  className={`w-14 h-14 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-5 shadow-lg relative z-10`}
-                >
-                  <feature.icon className="w-7 h-7 text-white" />
-                </motion.div>
-                <h3 className="text-xl font-display font-bold text-foreground mb-2 relative z-10">
-                  {feature.title}
-                </h3>
-                <p className="text-muted-foreground leading-relaxed relative z-10">
-                  {feature.description}
-                </p>
-              </motion.div>
-            );
-          })}
+          {features.map((feature) => (
+            <div
+              key={feature.title}
+              className={`${feature.bgGlow} bg-card/80 backdrop-blur-sm p-6 rounded-2xl shadow-soft hover:shadow-elevated transition-shadow border border-border group relative overflow-hidden`}
+            >
+              {/* Gradient accent line */}
+              <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${feature.gradient} opacity-0 group-hover:opacity-100 transition-opacity`} />
+              
+              {/* Glow effect on hover */}
+              <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-5 transition-opacity rounded-2xl`} />
+              
+              <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-5 shadow-lg relative z-10`}>
+                <feature.icon className="w-7 h-7 text-white" />
+              </div>
+              <h3 className="text-xl font-display font-bold text-foreground mb-2 relative z-10">
+                {feature.title}
+              </h3>
+              <p className="text-muted-foreground leading-relaxed relative z-10">
+                {feature.description}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
     </section>
