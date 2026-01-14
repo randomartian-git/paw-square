@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { PawPrint, Mail, Lock, User, Eye, EyeOff, Sparkles } from "lucide-react";
+import { PawPrint, Mail, Lock, User, Eye, EyeOff, Sparkles, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +18,6 @@ const Auth = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   
-  // Check URL params for mode
   const urlParams = new URLSearchParams(window.location.search);
   const initialMode = urlParams.get("mode") === "signup" ? false : true;
   
@@ -28,6 +27,7 @@ const Auth = () => {
   const [displayName, setDisplayName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showVerificationMessage, setShowVerificationMessage] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -35,7 +35,6 @@ const Auth = () => {
     }
   }, [user, navigate]);
   
-  // Update mode when URL changes
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     setIsLogin(params.get("mode") !== "signup");
@@ -67,19 +66,31 @@ const Auth = () => {
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
-        if (error) throw error;
-        toast({
-          title: "Welcome back! 🐾",
-          description: "You've successfully signed in.",
-        });
-        navigate("/");
+        
+        if (error) {
+          if (error.message.includes("Email not confirmed")) {
+            toast({
+              title: "Email not verified",
+              description: "Please check your email and click the verification link before signing in.",
+              variant: "destructive",
+            });
+          } else {
+            throw error;
+          }
+        } else {
+          toast({
+            title: "Welcome back! 🐾",
+            description: "You've successfully signed in.",
+          });
+          navigate("/");
+        }
       } else {
         const redirectUrl = `${window.location.origin}/`;
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -89,6 +100,7 @@ const Auth = () => {
             },
           },
         });
+        
         if (error) {
           if (error.message.includes("already registered")) {
             toast({
@@ -100,11 +112,20 @@ const Auth = () => {
             throw error;
           }
         } else {
-          toast({
-            title: "Welcome to PawSquare! 🎉",
-            description: "Your account has been created successfully.",
-          });
-          navigate("/");
+          // Check if email confirmation is required
+          if (data?.user?.identities?.length === 0) {
+            toast({
+              title: "Account exists",
+              description: "This email is already registered. Try signing in instead.",
+              variant: "destructive",
+            });
+          } else {
+            setShowVerificationMessage(true);
+            toast({
+              title: "Check your email! 📧",
+              description: "We've sent you a verification link. Please verify your email to continue.",
+            });
+          }
         }
       }
     } catch (error: any) {
@@ -118,6 +139,60 @@ const Auth = () => {
     }
   };
 
+  if (showVerificationMessage) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <motion.div
+            animate={{ rotate: [0, 360] }}
+            transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+            className="absolute -top-1/4 -right-1/4 w-1/2 h-1/2 bg-gradient-to-br from-primary/10 to-accent/10 rounded-full blur-3xl"
+          />
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="w-full max-w-md text-center"
+        >
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.2, type: "spring" }}
+            className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg"
+          >
+            <CheckCircle2 className="w-10 h-10 text-white" />
+          </motion.div>
+
+          <h1 className="text-2xl font-display font-bold mb-2">Check your email!</h1>
+          <p className="text-muted-foreground mb-6">
+            We've sent a verification link to <strong className="text-foreground">{email}</strong>. 
+            Click the link to verify your account and start your pet parenting journey!
+          </p>
+
+          <div className="space-y-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowVerificationMessage(false)}
+              className="w-full"
+            >
+              Back to Sign In
+            </Button>
+            <p className="text-sm text-muted-foreground">
+              Didn't receive the email? Check your spam folder or{" "}
+              <button 
+                onClick={handleSubmit}
+                className="text-primary hover:underline"
+              >
+                resend verification
+              </button>
+            </p>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       {/* Background decoration */}
@@ -125,34 +200,36 @@ const Auth = () => {
         <motion.div
           animate={{ 
             rotate: [0, 360],
-            scale: [1, 1.1, 1],
+            scale: [1, 1.05, 1],
           }}
-          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute -top-1/4 -right-1/4 w-1/2 h-1/2 bg-gradient-hero opacity-10 rounded-full blur-3xl"
+          transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+          className="absolute -top-1/4 -right-1/4 w-1/2 h-1/2 bg-gradient-to-br from-primary/10 to-accent/10 rounded-full blur-3xl"
         />
         <motion.div
           animate={{ 
             rotate: [360, 0],
-            scale: [1, 1.2, 1],
+            scale: [1, 1.1, 1],
           }}
-          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-          className="absolute -bottom-1/4 -left-1/4 w-1/2 h-1/2 bg-gradient-secondary opacity-10 rounded-full blur-3xl"
+          transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
+          className="absolute -bottom-1/4 -left-1/4 w-1/2 h-1/2 bg-gradient-to-br from-tertiary/10 to-quaternary/10 rounded-full blur-3xl"
         />
       </div>
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
         className="w-full max-w-md relative"
       >
         {/* Logo */}
         <div className="text-center mb-8">
           <motion.div
             whileHover={{ scale: 1.05 }}
+            transition={{ duration: 0.2 }}
             className="inline-flex items-center gap-3 cursor-pointer"
             onClick={() => navigate("/")}
           >
-            <div className="w-14 h-14 rounded-2xl bg-gradient-hero flex items-center justify-center shadow-glow">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-glow">
               <PawPrint className="w-7 h-7 text-primary-foreground" />
             </div>
             <span className="text-3xl font-display font-bold">
@@ -167,6 +244,7 @@ const Auth = () => {
         {/* Auth Card */}
         <motion.div
           layout
+          transition={{ duration: 0.2 }}
           className="bg-card border border-border rounded-2xl p-8 shadow-elevated"
         >
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -175,6 +253,7 @@ const Auth = () => {
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
                 className="space-y-2"
               >
                 <Label htmlFor="displayName">Display Name</Label>
@@ -231,10 +310,16 @@ const Auth = () => {
               </div>
             </div>
 
+            {!isLogin && (
+              <p className="text-xs text-muted-foreground">
+                By signing up, you'll receive a verification email. Please verify your email to access all features.
+              </p>
+            )}
+
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-hero shadow-glow hover:shadow-elevated transition-shadow"
+              className="w-full bg-gradient-to-r from-primary to-accent shadow-glow hover:shadow-elevated transition-shadow"
             >
               {loading ? (
                 <motion.div

@@ -2,9 +2,11 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { PawPrint, Users, Heart, Sparkles, Star, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRef } from "react";
+import { useNavigate } from "react-router-dom";
 
 const Hero = () => {
   const ref = useRef(null);
+  const navigate = useNavigate();
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ["start start", "end start"]
@@ -147,16 +149,10 @@ const Hero = () => {
           >
             <Button
               size="lg"
+              onClick={() => navigate("/forum")}
               className="bg-gradient-hero text-lg px-8 py-6 shadow-glow hover:shadow-elevated transition-all hover:scale-105 font-semibold"
             >
               <PawPrint className="w-5 h-5 mr-2" />
-              Join the Community
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="text-lg px-8 py-6 border-2 border-tertiary/50 hover:bg-tertiary/10 hover:border-tertiary transition-all font-semibold text-tertiary hover:shadow-glow-tertiary"
-            >
               Explore Posts
             </Button>
           </motion.div>

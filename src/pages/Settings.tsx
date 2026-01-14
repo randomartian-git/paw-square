@@ -1,8 +1,14 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Settings as SettingsIcon, Sun, Moon, Eye, Check, ArrowLeft } from "lucide-react";
+import { Settings as SettingsIcon, Sun, Moon, Eye, Check, ArrowLeft, Lock, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useTheme, ThemeMode } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 
 const themeOptions: { id: ThemeMode; name: string; description: string; icon: typeof Sun; colors: string[] }[] = [
@@ -31,6 +37,60 @@ const themeOptions: { id: ThemeMode; name: string; description: string; icon: ty
 
 const Settings = () => {
   const { theme, setTheme } = useTheme();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [newEmail, setNewEmail] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
+  const handleUpdateEmail = async () => {
+    if (!newEmail.trim()) {
+      toast({ title: "Please enter a new email", variant: "destructive" });
+      return;
+    }
+
+    setIsUpdatingEmail(true);
+    const { error } = await supabase.auth.updateUser({ email: newEmail });
+
+    if (error) {
+      toast({ title: "Error updating email", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Email update initiated", description: "Please check your new email for a confirmation link." });
+      setNewEmail("");
+    }
+    setIsUpdatingEmail(false);
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!newPassword.trim()) {
+      toast({ title: "Please enter a new password", variant: "destructive" });
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast({ title: "Password must be at least 6 characters", variant: "destructive" });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast({ title: "Passwords don't match", variant: "destructive" });
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+    if (error) {
+      toast({ title: "Error updating password", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Password updated successfully!" });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    }
+    setIsUpdatingPassword(false);
+  };
 
   return (
     <div className="min-h-screen bg-background transition-colors duration-300">
@@ -40,6 +100,7 @@ const Settings = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
           className="max-w-3xl mx-auto"
         >
           {/* Header */}
@@ -50,7 +111,7 @@ const Settings = () => {
               </Button>
             </Link>
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-gradient-hero flex items-center justify-center shadow-glow">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-glow">
                 <SettingsIcon className="w-6 h-6 text-primary-foreground" />
               </div>
               <div>
@@ -77,9 +138,9 @@ const Settings = () => {
                     key={option.id}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
+                    transition={{ delay: index * 0.05, duration: 0.2 }}
                     onClick={() => setTheme(option.id)}
-                    className={`relative w-full p-5 rounded-2xl border-2 text-left transition-all duration-300 ${
+                    className={`relative w-full p-5 rounded-2xl border-2 text-left transition-all duration-200 ${
                       isSelected
                         ? "border-primary bg-primary/10 shadow-glow"
                         : "border-border bg-card hover:border-primary/50 hover:bg-card/80"
@@ -99,6 +160,7 @@ const Settings = () => {
                             <motion.span
                               initial={{ scale: 0 }}
                               animate={{ scale: 1 }}
+                              transition={{ duration: 0.2 }}
                               className="w-5 h-5 rounded-full bg-primary flex items-center justify-center"
                             >
                               <Check className="w-3 h-3 text-primary-foreground" />
@@ -109,7 +171,6 @@ const Settings = () => {
                           {option.description}
                         </p>
                         
-                        {/* Color preview */}
                         <div className="flex gap-2 mt-3">
                           {option.colors.map((color, i) => (
                             <div
@@ -138,11 +199,112 @@ const Settings = () => {
             </div>
           </section>
 
+          {/* Account Section - Only show if logged in */}
+          {user && (
+            <section className="mb-10">
+              <h2 className="text-lg font-display font-semibold mb-4 flex items-center gap-2">
+                <Lock className="w-5 h-5 text-primary" />
+                Account Settings
+              </h2>
+
+              <div className="space-y-6">
+                {/* Change Email */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2, duration: 0.2 }}
+                  className="p-5 rounded-2xl bg-card border border-border"
+                >
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+                      <Mail className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">Change Email</h3>
+                      <p className="text-sm text-muted-foreground">Current: {user.email}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div>
+                      <Label htmlFor="newEmail">New Email Address</Label>
+                      <Input
+                        id="newEmail"
+                        type="email"
+                        value={newEmail}
+                        onChange={(e) => setNewEmail(e.target.value)}
+                        placeholder="Enter new email"
+                        className="mt-1"
+                      />
+                    </div>
+                    <Button
+                      onClick={handleUpdateEmail}
+                      disabled={isUpdatingEmail || !newEmail.trim()}
+                      className="bg-gradient-to-r from-primary to-accent"
+                    >
+                      {isUpdatingEmail ? "Updating..." : "Update Email"}
+                    </Button>
+                  </div>
+                </motion.div>
+
+                {/* Change Password */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3, duration: 0.2 }}
+                  className="p-5 rounded-2xl bg-card border border-border"
+                >
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+                      <Lock className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">Change Password</h3>
+                      <p className="text-sm text-muted-foreground">Update your account password</p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div>
+                      <Label htmlFor="newPassword">New Password</Label>
+                      <Input
+                        id="newPassword"
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Enter new password"
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                      <Input
+                        id="confirmPassword"
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Confirm new password"
+                        className="mt-1"
+                      />
+                    </div>
+                    <Button
+                      onClick={handleUpdatePassword}
+                      disabled={isUpdatingPassword || !newPassword.trim()}
+                      className="bg-gradient-to-r from-primary to-accent"
+                    >
+                      {isUpdatingPassword ? "Updating..." : "Update Password"}
+                    </Button>
+                  </div>
+                </motion.div>
+              </div>
+            </section>
+          )}
+
           {/* Info Box */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
+            transition={{ delay: 0.4, duration: 0.2 }}
             className="p-5 rounded-2xl bg-card border border-border"
           >
             <h3 className="font-semibold mb-2">About Accessibility</h3>

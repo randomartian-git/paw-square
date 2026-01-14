@@ -1,8 +1,11 @@
 import { motion, useScroll, useTransform, useInView } from "framer-motion";
 import { Heart, MessageCircle, Share2, MoreHorizontal, PawPrint } from "lucide-react";
 import { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useToast } from "@/hooks/use-toast";
+import CreatePostModal from "@/components/forum/CreatePostModal";
 
 interface Post {
   id: number;
@@ -21,7 +24,7 @@ interface Post {
   accentColor: string;
 }
 
-const initialPosts: Post[] = [
+const allPosts: Post[] = [
   {
     id: 1,
     author: {
@@ -69,6 +72,52 @@ const initialPosts: Post[] = [
     isLiked: false,
     accentColor: "tertiary",
   },
+  {
+    id: 4,
+    author: {
+      name: "Alex Kim",
+      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop",
+      petName: "Whiskers",
+      petType: "Persian Cat",
+    },
+    content: "Whiskers has discovered the joy of knocking things off tables. My favorite mug didn't survive. 😭 Anyone else dealing with a mischievous kitty?",
+    likes: 423,
+    comments: 67,
+    timeAgo: "8 hours ago",
+    isLiked: false,
+    accentColor: "primary",
+  },
+  {
+    id: 5,
+    author: {
+      name: "Maria Santos",
+      avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop",
+      petName: "Rocky",
+      petType: "German Shepherd",
+    },
+    content: "Morning hikes with Rocky are the best way to start the day! 🌄 He's such a good trail buddy.",
+    image: "https://images.unsplash.com/photo-1558788353-f76d92427f16?w=600&h=400&fit=crop",
+    likes: 678,
+    comments: 34,
+    timeAgo: "12 hours ago",
+    isLiked: true,
+    accentColor: "accent",
+  },
+  {
+    id: 6,
+    author: {
+      name: "David Park",
+      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop",
+      petName: "Coco",
+      petType: "Poodle",
+    },
+    content: "Coco just got her summer haircut! She seems so happy and is running around like crazy. Fresh trim energy is real! ✂️🐩",
+    likes: 345,
+    comments: 28,
+    timeAgo: "1 day ago",
+    isLiked: false,
+    accentColor: "tertiary",
+  },
 ];
 
 const accentStyles: Record<string, { ring: string; bg: string; glow: string }> = {
@@ -77,22 +126,20 @@ const accentStyles: Record<string, { ring: string; bg: string; glow: string }> =
   tertiary: { ring: "ring-tertiary/40", bg: "bg-tertiary", glow: "shadow-glow-tertiary" },
 };
 
-const PostCard = ({ post, onLike, index }: { post: Post; onLike: (id: number) => void; index: number }) => {
+const PostCard = ({ post, onLike, onShare, index }: { post: Post; onLike: (id: number) => void; onShare: (post: Post) => void; index: number }) => {
   const accent = accentStyles[post.accentColor] || accentStyles.primary;
   const cardRef = useRef(null);
   const isInView = useInView(cardRef, { once: true, margin: "-50px" });
-  
-  // Alternate entrance directions
-  const isEven = index % 2 === 0;
+  const navigate = useNavigate();
   
   return (
     <motion.div
       ref={cardRef}
-      initial={{ opacity: 0, x: isEven ? -50 : 50, y: 30 }}
-      animate={isInView ? { opacity: 1, x: 0, y: 0 } : {}}
-      transition={{ duration: 0.6, delay: index * 0.15, type: "spring", stiffness: 100 }}
-      whileHover={{ scale: 1.02, y: -5 }}
-      className={`bg-card/80 backdrop-blur-sm rounded-2xl shadow-soft border border-border overflow-hidden hover:shadow-elevated transition-all hover:${accent.glow}`}
+      initial={{ opacity: 0, y: 30 }}
+      animate={isInView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.4, delay: index * 0.1, ease: "easeOut" }}
+      whileHover={{ y: -4 }}
+      className={`bg-card/80 backdrop-blur-sm rounded-2xl shadow-soft border border-border overflow-hidden hover:shadow-elevated transition-all duration-300`}
     >
       {/* Post Header */}
       <div className="p-5 flex items-start justify-between">
@@ -126,8 +173,8 @@ const PostCard = ({ post, onLike, index }: { post: Post; onLike: (id: number) =>
       {post.image && (
         <motion.div 
           className="relative aspect-video bg-muted overflow-hidden"
-          whileHover={{ scale: 1.02 }}
-          transition={{ duration: 0.3 }}
+          whileHover={{ scale: 1.01 }}
+          transition={{ duration: 0.2 }}
         >
           <img
             src={post.image}
@@ -142,8 +189,7 @@ const PostCard = ({ post, onLike, index }: { post: Post; onLike: (id: number) =>
       <div className="p-4 flex items-center justify-between border-t border-border">
         <div className="flex items-center gap-6">
           <motion.button
-            whileTap={{ scale: 0.85 }}
-            whileHover={{ scale: 1.15 }}
+            whileTap={{ scale: 0.9 }}
             onClick={() => onLike(post.id)}
             className={`flex items-center gap-2 font-medium transition-colors ${
               post.isLiked ? "text-accent" : "text-muted-foreground hover:text-accent"
@@ -152,12 +198,18 @@ const PostCard = ({ post, onLike, index }: { post: Post; onLike: (id: number) =>
             <Heart className={`w-5 h-5 ${post.isLiked ? "fill-accent" : ""}`} />
             <span>{post.likes}</span>
           </motion.button>
-          <button className="flex items-center gap-2 text-muted-foreground hover:text-tertiary transition-colors font-medium">
+          <button 
+            onClick={() => navigate("/forum")}
+            className="flex items-center gap-2 text-muted-foreground hover:text-tertiary transition-colors font-medium"
+          >
             <MessageCircle className="w-5 h-5" />
             <span>{post.comments}</span>
           </button>
         </div>
-        <button className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors font-medium">
+        <button 
+          onClick={() => onShare(post)}
+          className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors font-medium"
+        >
           <Share2 className="w-5 h-5" />
           <span className="hidden sm:inline">Share</span>
         </button>
@@ -167,23 +219,23 @@ const PostCard = ({ post, onLike, index }: { post: Post; onLike: (id: number) =>
 };
 
 const CommunityFeed = () => {
-  const [posts, setPosts] = useState(initialPosts);
+  const [posts, setPosts] = useState(allPosts.slice(0, 3));
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [loadedCount, setLoadedCount] = useState(3);
   const containerRef = useRef(null);
   const isInView = useInView(containerRef, { once: true, margin: "-100px" });
+  const { toast } = useToast();
+  const navigate = useNavigate();
   
   const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ["start end", "end start"]
   });
 
-  // Enhanced multi-directional parallax
-  const y1 = useTransform(scrollYProgress, [0, 1], [120, -120]);
-  const y2 = useTransform(scrollYProgress, [0, 1], [-100, 150]);
-  const y3 = useTransform(scrollYProgress, [0, 1], [80, -80]);
-  const x1 = useTransform(scrollYProgress, [0, 1], [80, -80]);
-  const x2 = useTransform(scrollYProgress, [0, 1], [-100, 100]);
-  const rotate1 = useTransform(scrollYProgress, [0, 1], [0, 45]);
-  const rotate2 = useTransform(scrollYProgress, [0, 1], [0, -30]);
+  const y1 = useTransform(scrollYProgress, [0, 1], [80, -80]);
+  const y2 = useTransform(scrollYProgress, [0, 1], [-60, 100]);
+  const x1 = useTransform(scrollYProgress, [0, 1], [50, -50]);
+  const x2 = useTransform(scrollYProgress, [0, 1], [-60, 60]);
 
   const handleLike = (id: number) => {
     setPosts((prev) =>
@@ -199,35 +251,43 @@ const CommunityFeed = () => {
     );
   };
 
+  const handleShare = async (post: Post) => {
+    const url = `${window.location.origin}/forum`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({ title: "Link copied to clipboard!" });
+    } catch {
+      toast({ title: "Failed to copy link", variant: "destructive" });
+    }
+  };
+
+  const handleLoadMore = () => {
+    const newCount = Math.min(loadedCount + 3, allPosts.length);
+    setPosts(allPosts.slice(0, newCount));
+    setLoadedCount(newCount);
+  };
+
   return (
     <section id="community" className="py-20 relative overflow-hidden" ref={containerRef}>
-      {/* Enhanced animated background decorations with multi-directional movement */}
+      {/* Animated background decorations */}
       <motion.div 
         className="absolute top-1/4 right-0 w-72 h-72 bg-accent/10 rounded-full blur-3xl"
-        style={{ y: y1, x: x1, rotate: rotate1 }}
+        style={{ y: y1, x: x1 }}
       />
       <motion.div 
         className="absolute bottom-1/4 left-0 w-72 h-72 bg-tertiary/10 rounded-full blur-3xl"
-        style={{ y: y2, x: x2, rotate: rotate2 }}
+        style={{ y: y2, x: x2 }}
       />
       <motion.div 
         className="absolute top-1/2 left-1/3 w-48 h-48 bg-primary/5 rounded-full blur-3xl"
-        style={{ y: y3, x: x1 }}
-      />
-      <motion.div 
-        className="absolute top-3/4 right-1/4 w-64 h-64 bg-quaternary/8 rounded-full blur-3xl"
-        style={{ y: y1, x: x2, rotate: rotate1 }}
-      />
-      <motion.div 
-        className="absolute bottom-0 left-1/2 w-56 h-56 bg-accent/5 rounded-full blur-3xl"
-        style={{ y: y2, x: x1, rotate: rotate2 }}
+        style={{ y: y1 }}
       />
       
       <div className="container mx-auto px-4 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.4 }}
           className="text-center mb-12"
         >
           <h2 className="text-3xl sm:text-4xl font-display font-bold text-foreground mb-4">
@@ -240,9 +300,9 @@ const CommunityFeed = () => {
 
         {/* Create Post Prompt */}
         <motion.div
-          initial={{ opacity: 0, y: 20, x: -30 }}
-          animate={isInView ? { opacity: 1, y: 0, x: 0 } : {}}
-          transition={{ duration: 0.6, delay: 0.1, type: "spring" }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.4, delay: 0.1 }}
           className="max-w-2xl mx-auto mb-8"
         >
           <div className="bg-card/80 backdrop-blur-sm rounded-2xl shadow-soft border border-border p-4 flex items-center gap-4">
@@ -251,10 +311,16 @@ const CommunityFeed = () => {
                 <PawPrint className="w-5 h-5" />
               </AvatarFallback>
             </Avatar>
-            <div className="flex-1 bg-muted/50 rounded-xl px-4 py-3 text-muted-foreground cursor-pointer hover:bg-muted/70 transition-colors border border-border/50">
+            <div 
+              onClick={() => setIsCreateModalOpen(true)}
+              className="flex-1 bg-muted/50 rounded-xl px-4 py-3 text-muted-foreground cursor-pointer hover:bg-muted/70 transition-colors border border-border/50"
+            >
               Share something with the community...
             </div>
-            <Button className="bg-gradient-hero shadow-glow hidden sm:flex hover:shadow-elevated transition-shadow">
+            <Button 
+              onClick={() => setIsCreateModalOpen(true)}
+              className="bg-gradient-to-r from-primary to-accent shadow-glow hidden sm:flex hover:shadow-elevated transition-shadow"
+            >
               Post
             </Button>
           </div>
@@ -263,7 +329,7 @@ const CommunityFeed = () => {
         {/* Posts Grid */}
         <div className="max-w-2xl mx-auto space-y-6">
           {posts.map((post, index) => (
-            <PostCard key={post.id} post={post} onLike={handleLike} index={index} />
+            <PostCard key={post.id} post={post} onLike={handleLike} onShare={handleShare} index={index} />
           ))}
         </div>
 
@@ -274,11 +340,32 @@ const CommunityFeed = () => {
           viewport={{ once: true }}
           className="text-center mt-10"
         >
-          <Button variant="outline" size="lg" className="font-semibold border-2 hover:border-primary hover:text-primary hover:shadow-glow transition-all">
-            Load More Posts
-          </Button>
+          {loadedCount < allPosts.length ? (
+            <Button 
+              onClick={handleLoadMore}
+              variant="outline" 
+              size="lg" 
+              className="font-semibold border-2 hover:border-primary hover:text-primary hover:shadow-glow transition-all"
+            >
+              Load More Posts
+            </Button>
+          ) : (
+            <Button 
+              onClick={() => navigate("/forum")}
+              variant="outline" 
+              size="lg" 
+              className="font-semibold border-2 hover:border-primary hover:text-primary hover:shadow-glow transition-all"
+            >
+              View All Posts in Forum
+            </Button>
+          )}
         </motion.div>
       </div>
+
+      <CreatePostModal 
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+      />
     </section>
   );
 };
