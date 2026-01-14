@@ -47,6 +47,9 @@ const getCorsHeaders = (origin: string | null): Record<string, string> => {
 const RATE_LIMIT_PER_HOUR = 20;
 
 serve(async (req) => {
+  const origin = req.headers.get("Origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
