@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   MapPin, Calendar, Edit2, Plus, Dog, BookmarkIcon, MessageSquare,
-  Heart, Award, Camera, X, Loader2
+  Heart, Award, Camera, X, Loader2, Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -325,6 +325,60 @@ const Profile = () => {
     }
   };
 
+  const handleRemoveAvatar = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user || !profile?.avatar_url) return;
+
+    setUploadingAvatar(true);
+    try {
+      const oldPath = profile.avatar_url.split('/profile-images/')[1];
+      if (oldPath) {
+        await supabase.storage.from('profile-images').remove([decodeURIComponent(oldPath)]);
+      }
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ avatar_url: null })
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      setProfile(prev => prev ? { ...prev, avatar_url: null } : null);
+      toast({ title: "Profile picture removed" });
+    } catch (error: any) {
+      toast({ title: "Error removing image", description: error.message, variant: "destructive" });
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const handleRemoveBanner = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user || !profile?.banner_url) return;
+
+    setUploadingBanner(true);
+    try {
+      const oldPath = profile.banner_url.split('/profile-images/')[1];
+      if (oldPath) {
+        await supabase.storage.from('profile-images').remove([decodeURIComponent(oldPath)]);
+      }
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ banner_url: null })
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      setProfile(prev => prev ? { ...prev, banner_url: null } : null);
+      toast({ title: "Banner removed" });
+    } catch (error: any) {
+      toast({ title: "Error removing banner", description: error.message, variant: "destructive" });
+    } finally {
+      setUploadingBanner(false);
+    }
+  };
+
   const handleDeletePet = async (petId: string) => {
     if (!user) return;
 
@@ -410,11 +464,23 @@ const Profile = () => {
             ) : (
               <div className="w-full h-full bg-gradient-to-r from-primary/30 via-accent/30 to-tertiary/30" />
             )}
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
               {uploadingBanner ? (
                 <Loader2 className="w-6 h-6 text-white animate-spin" />
               ) : (
-                <Camera className="w-6 h-6 text-white" />
+                <>
+                  <div className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors">
+                    <Camera className="w-5 h-5 text-white" />
+                  </div>
+                  {profile?.banner_url && (
+                    <button 
+                      onClick={handleRemoveBanner}
+                      className="p-2 rounded-full bg-destructive/80 hover:bg-destructive transition-colors"
+                    >
+                      <Trash2 className="w-5 h-5 text-white" />
+                    </button>
+                  )}
+                </>
               )}
             </div>
             <input
@@ -429,23 +495,33 @@ const Profile = () => {
           {/* Profile Info */}
           <div className="px-6 pb-6">
             <div className="flex flex-col sm:flex-row sm:items-end gap-4 -mt-12">
-              <div 
-                className="relative group cursor-pointer"
-                onClick={() => avatarInputRef.current?.click()}
-              >
-                <Avatar className="w-24 h-24 border-4 border-card">
-                  <AvatarImage src={profile?.avatar_url || undefined} />
-                  <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-3xl text-primary-foreground">
-                    {profile?.display_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "?"}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  {uploadingAvatar ? (
-                    <Loader2 className="w-6 h-6 text-white animate-spin" />
-                  ) : (
-                    <Camera className="w-6 h-6 text-white" />
-                  )}
+              <div className="relative group">
+                <div 
+                  className="cursor-pointer"
+                  onClick={() => avatarInputRef.current?.click()}
+                >
+                  <Avatar className="w-24 h-24 border-4 border-card">
+                    <AvatarImage src={profile?.avatar_url || undefined} />
+                    <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-3xl text-primary-foreground">
+                      {profile?.display_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "?"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    {uploadingAvatar ? (
+                      <Loader2 className="w-6 h-6 text-white animate-spin" />
+                    ) : (
+                      <Camera className="w-6 h-6 text-white" />
+                    )}
+                  </div>
                 </div>
+                {profile?.avatar_url && (
+                  <button 
+                    onClick={handleRemoveAvatar}
+                    className="absolute -bottom-1 -right-1 p-1.5 rounded-full bg-destructive hover:bg-destructive/90 transition-colors opacity-0 group-hover:opacity-100 shadow-md"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-white" />
+                  </button>
+                )}
                 <input
                   ref={avatarInputRef}
                   type="file"
