@@ -19,7 +19,6 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import PostDetailModal from "@/components/post/PostDetailModal";
 import type { ForumCategory } from "@/pages/Community";
 
 interface ForumPostListProps {
@@ -163,7 +162,7 @@ const formatTimeAgo = (dateString: string) => {
   return `${diffDays} days ago`;
 };
 
-const ForumPostCard = ({ post, index, onOpenPost }: { post: typeof mockPosts[0]; index: number; onOpenPost: (post: any) => void }) => {
+const ForumPostCard = ({ post, index }: { post: typeof mockPosts[0]; index: number }) => {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-50px" });
   const [isLiked, setIsLiked] = useState(false);
@@ -197,13 +196,17 @@ const ForumPostCard = ({ post, index, onOpenPost }: { post: typeof mockPosts[0];
 
   const handleShare = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const url = `${window.location.origin}/forum?post=${post.id}`;
+    const url = `${window.location.origin}/post/${post.id}`;
     try {
       await navigator.clipboard.writeText(url);
       toast({ title: "Link copied to clipboard!" });
     } catch {
       toast({ title: "Failed to copy link", variant: "destructive" });
     }
+  };
+
+  const handleOpenPost = () => {
+    navigate(`/post/${post.id}`);
   };
 
   const handleAuthorClick = (e: React.MouseEvent) => {
@@ -217,7 +220,7 @@ const ForumPostCard = ({ post, index, onOpenPost }: { post: typeof mockPosts[0];
       initial={{ opacity: 0, y: 20 }}
       animate={isInView ? { opacity: 1, y: 0 } : {}}
       transition={{ duration: 0.3, delay: index * 0.05, ease: "easeOut" }}
-      onClick={() => onOpenPost(post)}
+      onClick={handleOpenPost}
       className="group bg-card/50 backdrop-blur-sm rounded-2xl border border-border/50 p-6 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 transition-all duration-200 cursor-pointer"
     >
       <div className="flex gap-4">
@@ -292,7 +295,7 @@ const ForumPostCard = ({ post, index, onOpenPost }: { post: typeof mockPosts[0];
             {/* Stats */}
             <div className="flex items-center gap-4 text-muted-foreground">
               <button 
-                onClick={(e) => { e.stopPropagation(); onOpenPost(post); }}
+                onClick={(e) => { e.stopPropagation(); handleOpenPost(); }}
                 className="flex items-center gap-1 text-sm hover:text-accent transition-colors"
               >
                 <MessageCircle className="w-4 h-4" />
@@ -323,7 +326,6 @@ const ForumPostCard = ({ post, index, onOpenPost }: { post: typeof mockPosts[0];
 
 const ForumPostList = ({ selectedCategory, sortBy = "hot", onSortChange }: ForumPostListProps) => {
   const containerRef = useRef(null);
-  const [selectedPost, setSelectedPost] = useState<any>(null);
   const [displayedPosts, setDisplayedPosts] = useState(6);
   const { scrollYProgress } = useScroll({
     target: containerRef,
@@ -413,7 +415,6 @@ const ForumPostList = ({ selectedCategory, sortBy = "hot", onSortChange }: Forum
             key={post.id} 
             post={post} 
             index={index} 
-            onOpenPost={(p) => setSelectedPost(p)}
           />
         ))}
       </div>
@@ -454,12 +455,6 @@ const ForumPostList = ({ selectedCategory, sortBy = "hot", onSortChange }: Forum
           </p>
         </motion.div>
       )}
-
-      <PostDetailModal
-        isOpen={!!selectedPost}
-        onClose={() => setSelectedPost(null)}
-        post={selectedPost}
-      />
     </div>
   );
 };

@@ -14,6 +14,7 @@ import About from "./pages/About";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import AIAssistant from "./pages/AIAssistant";
+import PostDetail from "./pages/PostDetail";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +36,7 @@ const App = () => (
               <Route path="/about" element={<About />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/ai-assistant" element={<AIAssistant />} />
+              <Route path="/post/:postId" element={<PostDetail />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
