@@ -298,33 +298,6 @@ const CommunityFeed = () => {
           </p>
         </motion.div>
 
-        {/* Create Post Prompt */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.4, delay: 0.1 }}
-          className="max-w-2xl mx-auto mb-8"
-        >
-          <div className="bg-card/80 backdrop-blur-sm rounded-2xl shadow-soft border border-border p-4 flex items-center gap-4">
-            <Avatar className="w-10 h-10">
-              <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground">
-                <PawPrint className="w-5 h-5" />
-              </AvatarFallback>
-            </Avatar>
-            <div 
-              onClick={() => setIsCreateModalOpen(true)}
-              className="flex-1 bg-muted/50 rounded-xl px-4 py-3 text-muted-foreground cursor-pointer hover:bg-muted/70 transition-colors border border-border/50"
-            >
-              Share something with the community...
-            </div>
-            <Button 
-              onClick={() => setIsCreateModalOpen(true)}
-              className="bg-gradient-to-r from-primary to-accent shadow-glow hidden sm:flex hover:shadow-elevated transition-shadow"
-            >
-              Post
-            </Button>
-          </div>
-        </motion.div>
 
         {/* Posts Grid */}
         <div className="max-w-2xl mx-auto space-y-6">
