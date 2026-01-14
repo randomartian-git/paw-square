@@ -5,7 +5,6 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { AIAssistantContext } from "@/components/layout/AppLayout";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -17,10 +16,6 @@ const Navbar = () => {
     { name: "Community", icon: Users, href: "/community" },
     { name: "About", icon: Info, href: "/about" },
   ];
-
-  const handleOpenAI = () => {
-    AIAssistantContext.openAssistant();
-  };
 
   return (
     <motion.nav
@@ -83,13 +78,13 @@ const Navbar = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <button
-                onClick={handleOpenAI}
+              <Link
+                to="/ai-assistant"
                 className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground font-medium text-sm hover:shadow-glow transition-shadow"
               >
                 <Bot className="w-4 h-4" />
                 AI Assistant
-              </button>
+              </Link>
             </motion.div>
           </div>
 
@@ -169,13 +164,14 @@ const Navbar = () => {
               })}
               
               {/* AI Assistant - Mobile */}
-              <button
-                onClick={() => { handleOpenAI(); setIsOpen(false); }}
+              <Link
+                to="/ai-assistant"
+                onClick={() => setIsOpen(false)}
                 className="flex items-center gap-3 px-4 py-2 mx-4 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground font-medium text-sm"
               >
                 <Bot className="w-5 h-5" />
                 AI Pet Assistant
-              </button>
+              </Link>
               
               <div className="flex flex-col gap-2 px-4 pt-4 border-t border-border">
                 <Button variant="ghost" onClick={() => { navigate("/settings"); setIsOpen(false); }} className="w-full justify-center">
