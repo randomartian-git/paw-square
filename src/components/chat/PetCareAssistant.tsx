@@ -13,10 +13,14 @@ interface Message {
   content: string;
 }
 
+interface PetCareAssistantProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pet-care-assistant`;
 
-const PetCareAssistant = () => {
-  const [isOpen, setIsOpen] = useState(false);
+const PetCareAssistant = ({ isOpen, onClose }: PetCareAssistantProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -162,29 +166,25 @@ const PetCareAssistant = () => {
   };
 
   return (
-    <>
-      {/* Chat Toggle Button */}
-      <motion.button
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-40 p-4 bg-gradient-to-r from-primary to-accent rounded-full shadow-lg hover:shadow-xl transition-shadow"
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-      >
-        <PawPrint className="w-6 h-6 text-primary-foreground" />
-      </motion.button>
-
-      {/* Chat Window */}
-      <AnimatePresence>
-        {isOpen && (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Backdrop */}
           <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
-            className="fixed bottom-24 right-6 z-50 w-[380px] max-h-[600px] bg-card border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50"
+          />
+
+          {/* Chat Window */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[95vw] max-w-lg max-h-[80vh] bg-card border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col"
           >
             {/* Header */}
             <div className="bg-gradient-to-r from-primary to-accent p-4 flex items-center justify-between">
@@ -198,7 +198,7 @@ const PetCareAssistant = () => {
                 </div>
               </div>
               <button
-                onClick={() => setIsOpen(false)}
+                onClick={onClose}
                 className="p-2 rounded-full hover:bg-primary-foreground/20 transition-colors"
               >
                 <X className="w-5 h-5 text-primary-foreground" />
@@ -315,9 +315,9 @@ const PetCareAssistant = () => {
               </p>
             </div>
           </motion.div>
-        )}
-      </AnimatePresence>
-    </>
+        </>
+      )}
+    </AnimatePresence>
   );
 };
 
