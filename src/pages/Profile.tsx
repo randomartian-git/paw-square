@@ -17,7 +17,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import { formatDistanceToNow } from "date-fns";
-import AddPetModal from "@/components/profile/AddPetModal";
 
 type Profile = {
   id: string;
@@ -75,7 +74,6 @@ const Profile = () => {
   const [bookmarks, setBookmarks] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [isAddPetOpen, setIsAddPetOpen] = useState(false);
   const [isEditingFlairs, setIsEditingFlairs] = useState(false);
   const [selectedFlairs, setSelectedFlairs] = useState<string[]>(["helpful", "active"]);
   const [editForm, setEditForm] = useState({
@@ -334,7 +332,7 @@ const Profile = () => {
             <div className="bg-card rounded-xl border border-border p-6 sticky top-24">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold">My Pets</h2>
-                <Button size="sm" variant="ghost" onClick={() => setIsAddPetOpen(true)}>
+                <Button size="sm" variant="ghost" onClick={() => navigate("/add-pet")}>
                   <Plus className="w-4 h-4" />
                 </Button>
               </div>
@@ -345,7 +343,7 @@ const Profile = () => {
                     <Dog className="w-8 h-8 text-muted-foreground" />
                   </div>
                   <p className="text-sm text-muted-foreground mb-3">No pets added yet</p>
-                  <Button size="sm" className="bg-gradient-to-r from-primary to-accent" onClick={() => setIsAddPetOpen(true)}>
+                  <Button size="sm" className="bg-gradient-to-r from-primary to-accent" onClick={() => navigate("/add-pet")}>
                     <Plus className="w-4 h-4 mr-1" />
                     Add Pet
                   </Button>
@@ -501,12 +499,6 @@ const Profile = () => {
           </motion.div>
         </div>
       </main>
-
-      <AddPetModal 
-        isOpen={isAddPetOpen} 
-        onClose={() => setIsAddPetOpen(false)} 
-        onPetAdded={fetchData}
-      />
     </div>
   );
 };
