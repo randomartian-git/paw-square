@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Heart, MessageCircle, Share2, Send, Clock, Bookmark, ArrowLeft, Trash2 } from "lucide-react";
+import { Heart, MessageCircle, Share2, Send, Clock, Bookmark, ArrowLeft, Trash2, Pencil, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -68,6 +69,8 @@ const PostDetail = () => {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [commentsLoading, setCommentsLoading] = useState(true);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentContent, setEditingCommentContent] = useState("");
 
   useEffect(() => {
     if (postId) {
@@ -278,6 +281,36 @@ const PostDetail = () => {
     }
   };
 
+  const handleEditComment = (comment: Comment) => {
+    setEditingCommentId(comment.id);
+    setEditingCommentContent(comment.content);
+  };
+
+  const handleCancelEditComment = () => {
+    setEditingCommentId(null);
+    setEditingCommentContent("");
+  };
+
+  const handleSaveComment = async (commentId: string) => {
+    if (!user || !editingCommentContent.trim()) return;
+
+    const { error } = await supabase
+      .from("comments")
+      .update({ content: editingCommentContent.trim() })
+      .eq("id", commentId);
+
+    if (error) {
+      toast({ title: "Error updating comment", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Comment updated" });
+      setComments(prev => prev.map(c => 
+        c.id === commentId ? { ...c, content: editingCommentContent.trim() } : c
+      ));
+      setEditingCommentId(null);
+      setEditingCommentContent("");
+    }
+  };
+
   const handleShare = async () => {
     const url = `${window.location.origin}/post/${post?.id}`;
     try {
@@ -432,27 +465,35 @@ const PostDetail = () => {
               </motion.button>
 
               {user?.id === post.user_id && (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <button className="px-4 py-2 rounded-lg hover:bg-destructive/10 text-destructive transition-colors">
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete Post</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete your post and all associated comments.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleDeletePost} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                        Delete
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                <>
+                  <button 
+                    onClick={() => navigate(`/edit-post/${post.id}`)}
+                    className="px-4 py-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors"
+                  >
+                    <Pencil className="w-5 h-5" />
+                  </button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <button className="px-4 py-2 rounded-lg hover:bg-destructive/10 text-destructive transition-colors">
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Post</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently delete your post and all associated comments.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeletePost} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </>
               )}
             </div>
           </motion.article>
@@ -534,7 +575,39 @@ const PostDetail = () => {
                             {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
                           </span>
                         </div>
-                        <p className="text-foreground">{comment.content}</p>
+                        
+                        {/* Comment content or edit form */}
+                        {editingCommentId === comment.id ? (
+                          <div className="space-y-2">
+                            <Textarea
+                              value={editingCommentContent}
+                              onChange={(e) => setEditingCommentContent(e.target.value)}
+                              className="min-h-[60px] resize-none"
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                onClick={() => handleSaveComment(comment.id)}
+                                disabled={!editingCommentContent.trim()}
+                                className="bg-gradient-to-r from-primary to-accent"
+                              >
+                                <Check className="w-4 h-4 mr-1" />
+                                Save
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={handleCancelEditComment}
+                              >
+                                <X className="w-4 h-4 mr-1" />
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-foreground">{comment.content}</p>
+                        )}
+                        
                         <div className="flex items-center gap-2 mt-2">
                           <motion.button
                             whileTap={{ scale: 0.9 }}
@@ -547,28 +620,36 @@ const PostDetail = () => {
                             {comment.likes_count > 0 && comment.likes_count}
                           </motion.button>
 
-                          {user?.id === comment.user_id && (
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <button className="flex items-center gap-1 text-sm text-muted-foreground hover:text-destructive transition-colors">
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete Comment</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    This action cannot be undone. This will permanently delete your comment.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleDeleteComment(comment.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                          {user?.id === comment.user_id && editingCommentId !== comment.id && (
+                            <>
+                              <button 
+                                onClick={() => handleEditComment(comment)}
+                                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <button className="flex items-center gap-1 text-sm text-muted-foreground hover:text-destructive transition-colors">
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Comment</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This action cannot be undone. This will permanently delete your comment.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeleteComment(comment.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </>
                           )}
                         </div>
                       </div>
