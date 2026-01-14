@@ -36,7 +36,7 @@ const petTypeIcons: Record<string, any> = {
 const PetPhotoGallery = ({ pet, isOpen, onClose, onPhotoUpdated }: PetPhotoGalleryProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [photos, setPhotos] = useState<string[]>([]);
+  const [photos, setPhotos] = useState<{ id: string; photo_url: string }[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -48,35 +48,27 @@ const PetPhotoGallery = ({ pet, isOpen, onClose, onPhotoUpdated }: PetPhotoGalle
   }, [pet, isOpen]);
 
   const fetchPhotos = async () => {
-    if (!pet || !user) return;
+    if (!pet) return;
     setIsLoading(true);
 
-    const { data, error } = await supabase.storage
-      .from("pet-photos")
-      .list(`${user.id}/${pet.id}`, {
-        limit: 100,
-        sortBy: { column: "created_at", order: "desc" },
-      });
+    const { data, error } = await supabase
+      .from("pet_photos")
+      .select("id, photo_url")
+      .eq("pet_id", pet.id)
+      .order("created_at", { ascending: false });
 
     if (error) {
       console.error("Error fetching photos:", error);
       setPhotos([]);
-    } else if (data) {
-      const photoUrls = data
-        .filter((file) => file.name !== ".emptyFolderPlaceholder")
-        .map((file) => {
-          const { data: { publicUrl } } = supabase.storage
-            .from("pet-photos")
-            .getPublicUrl(`${user.id}/${pet.id}/${file.name}`);
-          return publicUrl;
-        });
+    } else {
+      const photoList = data || [];
       
       // Add the main photo if it exists and isn't already in the list
-      if (pet.photo_url && !photoUrls.includes(pet.photo_url)) {
-        photoUrls.unshift(pet.photo_url);
+      if (pet.photo_url && !photoList.some(p => p.photo_url === pet.photo_url)) {
+        photoList.unshift({ id: "main", photo_url: pet.photo_url });
       }
       
-      setPhotos(photoUrls);
+      setPhotos(photoList);
     }
     setIsLoading(false);
   };
@@ -98,58 +90,75 @@ const PetPhotoGallery = ({ pet, isOpen, onClose, onPhotoUpdated }: PetPhotoGalle
     setIsUploading(true);
 
     const fileExt = file.name.split(".").pop();
-    const fileName = `${user.id}/${pet.id}/${Date.now()}.${fileExt}`;
+    const fileName = `${pet.id}/${Date.now()}.${fileExt}`;
 
-    const { error } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from("pet-photos")
       .upload(fileName, file);
 
-    if (error) {
-      toast({ title: "Error uploading photo", description: error.message, variant: "destructive" });
+    if (uploadError) {
+      toast({ title: "Error uploading photo", description: uploadError.message, variant: "destructive" });
     } else {
-      toast({ title: "Photo uploaded! 📸" });
-      fetchPhotos();
-      onPhotoUpdated();
+      // Get the public URL and save to pet_photos table
+      const { data: publicUrl } = supabase.storage.from("pet-photos").getPublicUrl(fileName);
+      
+      const { error: insertError } = await supabase.from("pet_photos").insert({
+        pet_id: pet.id,
+        user_id: user.id,
+        photo_url: publicUrl.publicUrl
+      });
+
+      if (insertError) {
+        toast({ title: "Error saving photo", description: insertError.message, variant: "destructive" });
+      } else {
+        toast({ title: "Photo uploaded! 📸" });
+        fetchPhotos();
+        onPhotoUpdated();
+      }
     }
 
     setIsUploading(false);
     e.target.value = "";
   };
 
-  const handleDelete = async (photoUrl: string) => {
+  const handleDelete = async (photo: { id: string; photo_url: string }) => {
     if (!user || !pet) return;
 
-    // Extract the path from the URL
-    const urlParts = photoUrl.split("/pet-photos/");
-    if (urlParts.length < 2) {
-      toast({ title: "Cannot delete this photo", variant: "destructive" });
-      return;
-    }
+    // Don't delete from DB if it's just the main photo entry
+    if (photo.id !== "main") {
+      // Delete from pet_photos table
+      const { error: dbError } = await supabase
+        .from("pet_photos")
+        .delete()
+        .eq("id", photo.id);
 
-    const filePath = decodeURIComponent(urlParts[1]);
-
-    const { error } = await supabase.storage
-      .from("pet-photos")
-      .remove([filePath]);
-
-    if (error) {
-      toast({ title: "Error deleting photo", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Photo deleted" });
-      
-      // Update the main photo if we deleted it
-      if (pet.photo_url === photoUrl) {
-        const newPhotos = photos.filter((p) => p !== photoUrl);
-        await supabase
-          .from("pets")
-          .update({ photo_url: newPhotos[0] || null })
-          .eq("id", pet.id);
-        onPhotoUpdated();
+      if (dbError) {
+        toast({ title: "Error deleting photo", description: dbError.message, variant: "destructive" });
+        return;
       }
-      
-      fetchPhotos();
-      setSelectedIndex((prev) => Math.max(0, prev - 1));
     }
+
+    // Extract the path from the URL and delete from storage
+    const urlParts = photo.photo_url.split("/pet-photos/");
+    if (urlParts.length >= 2) {
+      const filePath = decodeURIComponent(urlParts[1]);
+      await supabase.storage.from("pet-photos").remove([filePath]);
+    }
+
+    toast({ title: "Photo deleted" });
+    
+    // Update the main photo if we deleted it
+    if (pet.photo_url === photo.photo_url) {
+      const newPhotos = photos.filter((p) => p.photo_url !== photo.photo_url);
+      await supabase
+        .from("pets")
+        .update({ photo_url: newPhotos[0]?.photo_url || null })
+        .eq("id", pet.id);
+      onPhotoUpdated();
+    }
+    
+    fetchPhotos();
+    setSelectedIndex((prev) => Math.max(0, prev - 1));
   };
 
   const handleSetMainPhoto = async (photoUrl: string) => {
@@ -191,8 +200,8 @@ const PetPhotoGallery = ({ pet, isOpen, onClose, onPhotoUpdated }: PetPhotoGalle
               <>
                 <AnimatePresence mode="wait">
                   <motion.img
-                    key={photos[selectedIndex]}
-                    src={photos[selectedIndex]}
+                    key={photos[selectedIndex].id}
+                    src={photos[selectedIndex].photo_url}
                     alt={`${pet?.name} photo ${selectedIndex + 1}`}
                     className="w-full h-full object-contain"
                     initial={{ opacity: 0 }}
@@ -225,11 +234,11 @@ const PetPhotoGallery = ({ pet, isOpen, onClose, onPhotoUpdated }: PetPhotoGalle
 
                 {/* Photo Actions */}
                 <div className="absolute bottom-2 right-2 flex gap-2">
-                  {photos[selectedIndex] !== pet?.photo_url && (
+                  {photos[selectedIndex].photo_url !== pet?.photo_url && (
                     <Button
                       size="sm"
                       variant="secondary"
-                      onClick={() => handleSetMainPhoto(photos[selectedIndex])}
+                      onClick={() => handleSetMainPhoto(photos[selectedIndex].photo_url)}
                     >
                       Set as Main
                     </Button>
@@ -262,7 +271,7 @@ const PetPhotoGallery = ({ pet, isOpen, onClose, onPhotoUpdated }: PetPhotoGalle
             <div className="flex gap-2 overflow-x-auto pb-2">
               {photos.map((photo, index) => (
                 <button
-                  key={photo}
+                  key={photo.id}
                   onClick={() => setSelectedIndex(index)}
                   className={`relative shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${
                     index === selectedIndex
@@ -270,8 +279,8 @@ const PetPhotoGallery = ({ pet, isOpen, onClose, onPhotoUpdated }: PetPhotoGalle
                       : "border-transparent hover:border-muted-foreground"
                   }`}
                 >
-                  <img src={photo} alt="" className="w-full h-full object-cover" />
-                  {photo === pet?.photo_url && (
+                  <img src={photo.photo_url} alt="" className="w-full h-full object-cover" />
+                  {photo.photo_url === pet?.photo_url && (
                     <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
                       <span className="text-[8px] font-bold text-primary-foreground bg-primary px-1 rounded">
                         MAIN
