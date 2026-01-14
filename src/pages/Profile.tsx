@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { 
   User, MapPin, Calendar, Edit2, Plus, Dog, Cat, Bird, 
-  Fish, Rabbit, Sparkles, Settings, BookmarkIcon, MessageSquare,
-  Heart, Award, Camera
+  Fish, Rabbit, Sparkles, BookmarkIcon, MessageSquare,
+  Heart, Award, Camera, X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import { formatDistanceToNow } from "date-fns";
+import AddPetModal from "@/components/profile/AddPetModal";
+import PostDetailModal from "@/components/post/PostDetailModal";
 
 type Profile = {
   id: string;
@@ -40,10 +42,12 @@ type Pet = {
 type Post = {
   id: string;
   title: string;
+  content: string;
   category: string;
   likes_count: number;
   comments_count: number;
   created_at: string;
+  user_id: string;
 };
 
 const petTypeIcons: Record<string, any> = {
@@ -56,10 +60,12 @@ const petTypeIcons: Record<string, any> = {
   other: Sparkles,
 };
 
-const badges = [
+const allFlairs = [
   { id: "helpful", name: "Helpful Owner", icon: Heart, color: "bg-red-500/20 text-red-400" },
   { id: "active", name: "Active Member", icon: MessageSquare, color: "bg-blue-500/20 text-blue-400" },
   { id: "trainer", name: "Trainer", icon: Award, color: "bg-purple-500/20 text-purple-400" },
+  { id: "rescue", name: "Rescue Advocate", icon: Heart, color: "bg-green-500/20 text-green-400" },
+  { id: "breeder", name: "Breeder", icon: Dog, color: "bg-orange-500/20 text-orange-400" },
 ];
 
 const Profile = () => {
@@ -70,6 +76,10 @@ const Profile = () => {
   const [bookmarks, setBookmarks] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [isAddPetOpen, setIsAddPetOpen] = useState(false);
+  const [isEditingFlairs, setIsEditingFlairs] = useState(false);
+  const [selectedFlairs, setSelectedFlairs] = useState<string[]>(["helpful", "active"]);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [editForm, setEditForm] = useState({
     display_name: "",
     bio: "",
@@ -93,9 +103,9 @@ const Profile = () => {
     const [profileRes, petsRes, postsRes, bookmarksRes] = await Promise.all([
       supabase.from("profiles").select("*").eq("user_id", user.id).maybeSingle(),
       supabase.from("pets").select("*").eq("user_id", user.id),
-      supabase.from("posts").select("id, title, category, likes_count, comments_count, created_at")
+      supabase.from("posts").select("*")
         .eq("user_id", user.id).order("created_at", { ascending: false }),
-      supabase.from("bookmarks").select("post_id, posts(id, title, category, likes_count, comments_count, created_at)")
+      supabase.from("bookmarks").select("post_id, posts(*)")
         .eq("user_id", user.id),
     ]);
 
@@ -147,6 +157,14 @@ const Profile = () => {
     }
   };
 
+  const toggleFlair = (flairId: string) => {
+    setSelectedFlairs(prev => 
+      prev.includes(flairId) 
+        ? prev.filter(f => f !== flairId)
+        : [...prev, flairId]
+    );
+  };
+
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -170,22 +188,31 @@ const Profile = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
           className="bg-card rounded-2xl border border-border overflow-hidden mb-8"
         >
           {/* Banner */}
-          <div className="h-32 bg-gradient-hero relative">
+          <div className="h-32 bg-gradient-to-r from-primary/30 via-accent/30 to-tertiary/30 relative group">
             <div className="absolute inset-0 bg-[url('/placeholder.svg')] bg-cover bg-center opacity-20" />
+            <button className="absolute bottom-2 right-2 p-2 rounded-lg bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Camera className="w-4 h-4" />
+            </button>
           </div>
           
           {/* Profile Info */}
           <div className="px-6 pb-6">
             <div className="flex flex-col sm:flex-row sm:items-end gap-4 -mt-12">
-              <Avatar className="w-24 h-24 border-4 border-card">
-                <AvatarImage src={profile?.avatar_url || undefined} />
-                <AvatarFallback className="bg-gradient-hero text-3xl text-primary-foreground">
-                  {profile?.display_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "?"}
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative group">
+                <Avatar className="w-24 h-24 border-4 border-card">
+                  <AvatarImage src={profile?.avatar_url || undefined} />
+                  <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-3xl text-primary-foreground">
+                    {profile?.display_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "?"}
+                  </AvatarFallback>
+                </Avatar>
+                <button className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <Camera className="w-6 h-6 text-white" />
+                </button>
+              </div>
               
               <div className="flex-1">
                 {isEditing ? (
@@ -220,7 +247,7 @@ const Profile = () => {
                     <Button variant="ghost" onClick={() => setIsEditing(false)}>
                       Cancel
                     </Button>
-                    <Button onClick={handleSaveProfile} className="bg-gradient-hero">
+                    <Button onClick={handleSaveProfile} className="bg-gradient-to-r from-primary to-accent">
                       Save
                     </Button>
                   </>
@@ -256,14 +283,44 @@ const Profile = () => {
               )}
             </div>
 
-            {/* Badges */}
-            <div className="flex flex-wrap gap-2 mt-4">
-              {badges.map((badge) => (
-                <Badge key={badge.id} className={badge.color}>
-                  <badge.icon className="w-3 h-3 mr-1" />
-                  {badge.name}
-                </Badge>
-              ))}
+            {/* Flairs/Badges */}
+            <div className="mt-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-sm font-medium">Flairs</span>
+                <button 
+                  onClick={() => setIsEditingFlairs(!isEditingFlairs)}
+                  className="text-xs text-primary hover:underline"
+                >
+                  {isEditingFlairs ? "Done" : "Edit"}
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {isEditingFlairs ? (
+                  allFlairs.map((flair) => {
+                    const isSelected = selectedFlairs.includes(flair.id);
+                    return (
+                      <Badge 
+                        key={flair.id} 
+                        className={`cursor-pointer transition-all ${isSelected ? flair.color : "bg-muted text-muted-foreground"}`}
+                        onClick={() => toggleFlair(flair.id)}
+                      >
+                        <flair.icon className="w-3 h-3 mr-1" />
+                        {flair.name}
+                        {isSelected && <X className="w-3 h-3 ml-1" />}
+                      </Badge>
+                    );
+                  })
+                ) : (
+                  allFlairs
+                    .filter(f => selectedFlairs.includes(f.id))
+                    .map((badge) => (
+                      <Badge key={badge.id} className={badge.color}>
+                        <badge.icon className="w-3 h-3 mr-1" />
+                        {badge.name}
+                      </Badge>
+                    ))
+                )}
+              </div>
             </div>
           </div>
         </motion.div>
@@ -273,12 +330,13 @@ const Profile = () => {
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3, delay: 0.1 }}
             className="lg:col-span-1"
           >
             <div className="bg-card rounded-xl border border-border p-6 sticky top-24">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold">My Pets</h2>
-                <Button size="sm" variant="ghost">
+                <Button size="sm" variant="ghost" onClick={() => setIsAddPetOpen(true)}>
                   <Plus className="w-4 h-4" />
                 </Button>
               </div>
@@ -289,7 +347,7 @@ const Profile = () => {
                     <Dog className="w-8 h-8 text-muted-foreground" />
                   </div>
                   <p className="text-sm text-muted-foreground mb-3">No pets added yet</p>
-                  <Button size="sm" className="bg-gradient-hero">
+                  <Button size="sm" className="bg-gradient-to-r from-primary to-accent" onClick={() => setIsAddPetOpen(true)}>
                     <Plus className="w-4 h-4 mr-1" />
                     Add Pet
                   </Button>
@@ -303,7 +361,7 @@ const Profile = () => {
                         key={pet.id}
                         className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
                       >
-                        <div className="w-12 h-12 rounded-full bg-gradient-hero flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
                           {pet.photo_url ? (
                             <img
                               src={pet.photo_url}
@@ -347,6 +405,7 @@ const Profile = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.2 }}
             className="lg:col-span-2"
           >
             <Tabs defaultValue="posts" className="w-full">
@@ -357,7 +416,7 @@ const Profile = () => {
                 </TabsTrigger>
                 <TabsTrigger value="bookmarks" className="flex-1">
                   <BookmarkIcon className="w-4 h-4 mr-2" />
-                  Saved
+                  Saved ({bookmarks.length})
                 </TabsTrigger>
               </TabsList>
 
@@ -366,7 +425,7 @@ const Profile = () => {
                   <div className="text-center py-12 bg-card rounded-xl border border-border">
                     <MessageSquare className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
                     <p className="text-muted-foreground">No posts yet</p>
-                    <Button className="mt-4 bg-gradient-hero" onClick={() => navigate("/community")}>
+                    <Button className="mt-4 bg-gradient-to-r from-primary to-accent" onClick={() => navigate("/forum")}>
                       Create Your First Post
                     </Button>
                   </div>
@@ -375,7 +434,8 @@ const Profile = () => {
                     <motion.div
                       key={post.id}
                       whileHover={{ scale: 1.01 }}
-                      className="bg-card rounded-xl border border-border p-4 cursor-pointer hover:border-primary/30 transition-colors"
+                      onClick={() => setSelectedPost({ ...post, author: { display_name: profile?.display_name, avatar_url: profile?.avatar_url } } as any)}
+                      className="bg-card rounded-xl border border-border p-4 cursor-pointer hover:border-primary/30 transition-all"
                     >
                       <div className="flex items-center justify-between">
                         <div>
@@ -408,7 +468,7 @@ const Profile = () => {
                   <div className="text-center py-12 bg-card rounded-xl border border-border">
                     <BookmarkIcon className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
                     <p className="text-muted-foreground">No saved posts yet</p>
-                    <Button className="mt-4 bg-gradient-hero" onClick={() => navigate("/community")}>
+                    <Button className="mt-4 bg-gradient-to-r from-primary to-accent" onClick={() => navigate("/forum")}>
                       Explore Community
                     </Button>
                   </div>
@@ -417,15 +477,24 @@ const Profile = () => {
                     <motion.div
                       key={post.id}
                       whileHover={{ scale: 1.01 }}
-                      className="bg-card rounded-xl border border-border p-4 cursor-pointer hover:border-primary/30 transition-colors"
+                      onClick={() => setSelectedPost(post as any)}
+                      className="bg-card rounded-xl border border-border p-4 cursor-pointer hover:border-primary/30 transition-all"
                     >
                       <Badge variant="outline" className="mb-2 capitalize">
                         {post.category}
                       </Badge>
                       <h3 className="font-semibold">{post.title}</h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
-                      </p>
+                      <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Heart className="w-4 h-4" />
+                          {post.likes_count}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <MessageSquare className="w-4 h-4" />
+                          {post.comments_count}
+                        </span>
+                        <span>{formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}</span>
+                      </div>
                     </motion.div>
                   ))
                 )}
@@ -434,6 +503,18 @@ const Profile = () => {
           </motion.div>
         </div>
       </main>
+
+      <AddPetModal 
+        isOpen={isAddPetOpen} 
+        onClose={() => setIsAddPetOpen(false)} 
+        onPetAdded={fetchData}
+      />
+
+      <PostDetailModal
+        isOpen={!!selectedPost}
+        onClose={() => setSelectedPost(null)}
+        post={selectedPost}
+      />
     </div>
   );
 };

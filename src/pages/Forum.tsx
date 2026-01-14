@@ -13,6 +13,7 @@ export type ForumCategory = "all" | "questions" | "discussions" | "tips" | "show
 const Forum = () => {
   const [selectedCategory, setSelectedCategory] = useState<ForumCategory>("all");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<"hot" | "new" | "top">("hot");
 
   return (
     <div className="min-h-screen bg-background">
@@ -22,18 +23,18 @@ const Forum = () => {
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <motion.div
           animate={{ 
-            x: [0, 30, 0],
-            y: [0, -20, 0],
+            x: [0, 20, 0],
+            y: [0, -15, 0],
           }}
-          transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
           className="absolute top-20 right-10 w-96 h-96 bg-primary/10 rounded-full blur-3xl"
         />
         <motion.div
           animate={{ 
-            x: [0, -20, 0],
-            y: [0, 30, 0],
+            x: [0, -15, 0],
+            y: [0, 20, 0],
           }}
-          transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
+          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
           className="absolute bottom-40 left-10 w-80 h-80 bg-accent/10 rounded-full blur-3xl"
         />
       </div>
@@ -44,6 +45,7 @@ const Forum = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
             className="text-center mb-12"
           >
             <h1 className="text-4xl md:text-5xl font-display font-bold mb-4">
@@ -60,7 +62,7 @@ const Forum = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
+            transition={{ delay: 0.1, duration: 0.3 }}
             className="md:hidden mb-6"
           >
             <Button 
@@ -82,7 +84,11 @@ const Forum = () => {
             />
 
             {/* Posts */}
-            <ForumPostList selectedCategory={selectedCategory} />
+            <ForumPostList 
+              selectedCategory={selectedCategory} 
+              sortBy={sortBy}
+              onSortChange={setSortBy}
+            />
           </div>
         </div>
       </main>
