@@ -231,7 +231,9 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           created_at: string
+          custom_flair: string | null
           display_name: string | null
+          flair: string[] | null
           id: string
           location: string | null
           updated_at: string
@@ -241,7 +243,9 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
+          custom_flair?: string | null
           display_name?: string | null
+          flair?: string[] | null
           id?: string
           location?: string | null
           updated_at?: string
@@ -251,7 +255,9 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
+          custom_flair?: string | null
           display_name?: string | null
+          flair?: string[] | null
           id?: string
           location?: string | null
           updated_at?: string

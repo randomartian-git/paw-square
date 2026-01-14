@@ -27,6 +27,8 @@ type Profile = {
   avatar_url: string | null;
   location: string | null;
   created_at: string;
+  flair: string[] | null;
+  custom_flair: string | null;
 };
 
 type Pet = {
@@ -50,7 +52,7 @@ type Post = {
 };
 
 
-const allFlairs = [
+const predefinedFlairs = [
   { id: "helpful", name: "Helpful Owner", icon: Heart, color: "bg-red-500/20 text-red-400" },
   { id: "active", name: "Active Member", icon: MessageSquare, color: "bg-blue-500/20 text-blue-400" },
   { id: "trainer", name: "Trainer", icon: Award, color: "bg-purple-500/20 text-purple-400" },
@@ -67,7 +69,9 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingFlairs, setIsEditingFlairs] = useState(false);
-  const [selectedFlairs, setSelectedFlairs] = useState<string[]>(["helpful", "active"]);
+  const [customFlairInput, setCustomFlairInput] = useState("");
+  const [selectedFlairs, setSelectedFlairs] = useState<string[]>([]);
+  const [customFlair, setCustomFlair] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
     display_name: "",
     bio: "",
@@ -105,6 +109,9 @@ const Profile = () => {
         bio: profileRes.data.bio || "",
         location: profileRes.data.location || "",
       });
+      setSelectedFlairs(profileRes.data.flair || []);
+      setCustomFlair(profileRes.data.custom_flair || null);
+      setCustomFlairInput(profileRes.data.custom_flair || "");
     }
     if (petsRes.data) setPets(petsRes.data);
     if (postsRes.data) setPosts(postsRes.data);
@@ -146,12 +153,71 @@ const Profile = () => {
     }
   };
 
-  const toggleFlair = (flairId: string) => {
-    setSelectedFlairs(prev => 
-      prev.includes(flairId) 
-        ? prev.filter(f => f !== flairId)
-        : [...prev, flairId]
-    );
+  const toggleFlair = async (flairId: string) => {
+    if (!user) return;
+    
+    const newFlairs = selectedFlairs.includes(flairId) 
+      ? selectedFlairs.filter(f => f !== flairId)
+      : [...selectedFlairs, flairId];
+    
+    setSelectedFlairs(newFlairs);
+    
+    const { error } = await supabase
+      .from("profiles")
+      .update({ flair: newFlairs })
+      .eq("user_id", user.id);
+    
+    if (error) {
+      toast({
+        title: "Error updating flairs",
+        description: error.message,
+        variant: "destructive",
+      });
+      // Revert on error
+      setSelectedFlairs(selectedFlairs);
+    }
+  };
+
+  const handleSaveCustomFlair = async () => {
+    if (!user) return;
+    
+    const trimmedFlair = customFlairInput.trim();
+    setCustomFlair(trimmedFlair || null);
+    
+    const { error } = await supabase
+      .from("profiles")
+      .update({ custom_flair: trimmedFlair || null })
+      .eq("user_id", user.id);
+    
+    if (error) {
+      toast({
+        title: "Error updating custom flair",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({ title: "Custom flair saved!" });
+    }
+  };
+
+  const handleRemoveCustomFlair = async () => {
+    if (!user) return;
+    
+    setCustomFlair(null);
+    setCustomFlairInput("");
+    
+    const { error } = await supabase
+      .from("profiles")
+      .update({ custom_flair: null })
+      .eq("user_id", user.id);
+    
+    if (error) {
+      toast({
+        title: "Error removing custom flair",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDeletePet = async (petId: string) => {
@@ -330,29 +396,70 @@ const Profile = () => {
               </div>
               <div className="flex flex-wrap gap-2">
                 {isEditingFlairs ? (
-                  allFlairs.map((flair) => {
-                    const isSelected = selectedFlairs.includes(flair.id);
-                    return (
-                      <Badge 
-                        key={flair.id} 
-                        className={`cursor-pointer transition-all ${isSelected ? flair.color : "bg-muted text-muted-foreground"}`}
-                        onClick={() => toggleFlair(flair.id)}
+                  <>
+                    {predefinedFlairs.map((flair) => {
+                      const isSelected = selectedFlairs.includes(flair.id);
+                      return (
+                        <Badge 
+                          key={flair.id} 
+                          className={`cursor-pointer transition-all ${isSelected ? flair.color : "bg-muted text-muted-foreground"}`}
+                          onClick={() => toggleFlair(flair.id)}
+                        >
+                          <flair.icon className="w-3 h-3 mr-1" />
+                          {flair.name}
+                          {isSelected && <X className="w-3 h-3 ml-1" />}
+                        </Badge>
+                      );
+                    })}
+                    {/* Custom flair input */}
+                    <div className="w-full mt-3 flex gap-2">
+                      <Input
+                        value={customFlairInput}
+                        onChange={(e) => setCustomFlairInput(e.target.value)}
+                        placeholder="Add custom flair..."
+                        className="max-w-xs h-8 text-sm"
+                        maxLength={30}
+                      />
+                      <Button 
+                        size="sm" 
+                        onClick={handleSaveCustomFlair}
+                        disabled={!customFlairInput.trim()}
+                        className="h-8"
                       >
-                        <flair.icon className="w-3 h-3 mr-1" />
-                        {flair.name}
-                        {isSelected && <X className="w-3 h-3 ml-1" />}
-                      </Badge>
-                    );
-                  })
+                        Save
+                      </Button>
+                      {customFlair && (
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          onClick={handleRemoveCustomFlair}
+                          className="h-8 text-destructive hover:text-destructive"
+                        >
+                          Remove Custom
+                        </Button>
+                      )}
+                    </div>
+                  </>
                 ) : (
-                  allFlairs
-                    .filter(f => selectedFlairs.includes(f.id))
-                    .map((badge) => (
-                      <Badge key={badge.id} className={badge.color}>
-                        <badge.icon className="w-3 h-3 mr-1" />
-                        {badge.name}
+                  <>
+                    {predefinedFlairs
+                      .filter(f => selectedFlairs.includes(f.id))
+                      .map((badge) => (
+                        <Badge key={badge.id} className={badge.color}>
+                          <badge.icon className="w-3 h-3 mr-1" />
+                          {badge.name}
+                        </Badge>
+                      ))}
+                    {customFlair && (
+                      <Badge className="bg-gradient-to-r from-primary/20 to-accent/20 text-primary">
+                        <Award className="w-3 h-3 mr-1" />
+                        {customFlair}
                       </Badge>
-                    ))
+                    )}
+                    {selectedFlairs.length === 0 && !customFlair && (
+                      <span className="text-sm text-muted-foreground">No flairs selected</span>
+                    )}
+                  </>
                 )}
               </div>
             </div>
