@@ -104,7 +104,7 @@ const Navbar = () => {
                   <Settings className="w-4 h-4 mr-2" />
                   Settings
                 </Button>
-                <Button variant="ghost" onClick={signOut} className="font-semibold hover:text-destructive">
+                <Button variant="ghost" onClick={() => { signOut(); navigate("/"); }} className="font-semibold hover:text-destructive">
                   <LogOut className="w-4 h-4 mr-2" />
                   Sign Out
                 </Button>
