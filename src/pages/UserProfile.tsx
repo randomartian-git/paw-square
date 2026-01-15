@@ -119,39 +119,41 @@ const UserProfile = () => {
         }
       }
 
-      // Create new conversation
-      const { data: newConversation, error: convError } = await supabase
-        .from("conversations")
-        .insert({})
-        .select()
-        .single();
+      // Create new conversation.
+      // IMPORTANT: we don't call `.select()` here because the conversations SELECT policy
+      // requires being a participant, and participants are added in the next steps.
+      const conversationId = crypto.randomUUID();
 
-      if (convError || !newConversation) {
-        throw new Error("Failed to create conversation");
+      const { error: convError } = await supabase.from("conversations").insert({
+        id: conversationId,
+      });
+
+      if (convError) {
+        throw convError;
       }
 
       // Add both participants (insert self first to satisfy RLS)
       const { error: addMeError } = await supabase.from("conversation_participants").insert({
-        conversation_id: newConversation.id,
+        conversation_id: conversationId,
         user_id: user.id,
       });
 
       if (addMeError) {
-        throw new Error("Failed to add participants");
+        throw addMeError;
       }
 
       const { error: addOtherError } = await supabase.from("conversation_participants").insert({
-        conversation_id: newConversation.id,
+        conversation_id: conversationId,
         user_id: userId,
       });
 
       if (addOtherError) {
-        throw new Error("Failed to add participants");
+        throw addOtherError;
       }
 
-      navigate(`/messages/${newConversation.id}`);
+      navigate(`/messages/${conversationId}`);
     } catch (error) {
-      console.error(error);
+      console.error("[startConversation]", error);
       toast.error("Failed to start conversation");
     } finally {
       setStartingConversation(false);
