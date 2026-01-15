@@ -19,6 +19,8 @@ import PostDetail from "./pages/PostDetail";
 import AddPet from "./pages/AddPet";
 import CreatePost from "./pages/CreatePost";
 import EditPost from "./pages/EditPost";
+import Messages from "./pages/Messages";
+import Conversation from "./pages/Conversation";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +47,8 @@ const App = () => (
               <Route path="/add-pet" element={<AddPet />} />
               <Route path="/create-post" element={<CreatePost />} />
               <Route path="/edit-post/:postId" element={<EditPost />} />
+              <Route path="/messages" element={<Messages />} />
+              <Route path="/messages/:conversationId" element={<Conversation />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
