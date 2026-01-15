@@ -183,19 +183,25 @@ const Community = () => {
     }
 
     const isLiked = likedPosts.has(postId);
+    const currentPost = posts.find(p => p.id === postId);
+    if (!currentPost) return;
+    
+    const newLikesCount = isLiked ? currentPost.likes_count - 1 : currentPost.likes_count + 1;
     
     if (isLiked) {
       await supabase.from("likes").delete().eq("user_id", user.id).eq("post_id", postId);
+      await supabase.from("posts").update({ likes_count: newLikesCount }).eq("id", postId);
       setLikedPosts(prev => {
         const next = new Set(prev);
         next.delete(postId);
         return next;
       });
-      setPosts(prev => prev.map(p => p.id === postId ? { ...p, likes_count: p.likes_count - 1 } : p));
+      setPosts(prev => prev.map(p => p.id === postId ? { ...p, likes_count: newLikesCount } : p));
     } else {
       await supabase.from("likes").insert({ user_id: user.id, post_id: postId });
+      await supabase.from("posts").update({ likes_count: newLikesCount }).eq("id", postId);
       setLikedPosts(prev => new Set([...prev, postId]));
-      setPosts(prev => prev.map(p => p.id === postId ? { ...p, likes_count: p.likes_count + 1 } : p));
+      setPosts(prev => prev.map(p => p.id === postId ? { ...p, likes_count: newLikesCount } : p));
     }
   };
 

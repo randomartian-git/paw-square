@@ -201,12 +201,16 @@ const PostDetail = () => {
     }
     if (!post) return;
 
+    const newLikesCount = isLiked ? likesCount - 1 : likesCount + 1;
+
     if (isLiked) {
       await supabase.from("likes").delete().eq("user_id", user.id).eq("post_id", post.id);
-      setLikesCount(prev => prev - 1);
+      await supabase.from("posts").update({ likes_count: newLikesCount }).eq("id", post.id);
+      setLikesCount(newLikesCount);
     } else {
       await supabase.from("likes").insert({ user_id: user.id, post_id: post.id });
-      setLikesCount(prev => prev + 1);
+      await supabase.from("posts").update({ likes_count: newLikesCount }).eq("id", post.id);
+      setLikesCount(newLikesCount);
     }
     setIsLiked(!isLiked);
   };
