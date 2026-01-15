@@ -90,7 +90,7 @@ const PetPhotoGallery = ({ pet, isOpen, onClose, onPhotoUpdated }: PetPhotoGalle
     setIsUploading(true);
 
     const fileExt = file.name.split(".").pop();
-    const fileName = `${pet.id}/${Date.now()}.${fileExt}`;
+    const fileName = `${user.id}/${pet.id}_${Date.now()}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from("pet-photos")
