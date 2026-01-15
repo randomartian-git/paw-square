@@ -92,23 +92,27 @@ const UserProfile = () => {
 
     try {
       // Check if a conversation already exists between these users
-      const { data: myConversations } = await supabase
+      const { data: myConversations, error: myConversationsError } = await supabase
         .from("conversation_participants")
         .select("conversation_id")
         .eq("user_id", user.id);
 
+      if (myConversationsError) throw myConversationsError;
+
       if (myConversations && myConversations.length > 0) {
         const conversationIds = myConversations.map((c) => c.conversation_id);
 
-        const { data: existingConv } = await supabase
+        const { data: existingConv, error: existingConvError } = await supabase
           .from("conversation_participants")
           .select("conversation_id")
           .eq("user_id", userId)
           .in("conversation_id", conversationIds)
           .limit(1)
-          .single();
+          .maybeSingle();
 
-        if (existingConv) {
+        if (existingConvError) throw existingConvError;
+
+        if (existingConv?.conversation_id) {
           // Conversation exists, navigate to it
           navigate(`/messages/${existingConv.conversation_id}`);
           return;
@@ -126,15 +130,22 @@ const UserProfile = () => {
         throw new Error("Failed to create conversation");
       }
 
-      // Add both participants
-      const { error: participantsError } = await supabase
-        .from("conversation_participants")
-        .insert([
-          { conversation_id: newConversation.id, user_id: user.id },
-          { conversation_id: newConversation.id, user_id: userId },
-        ]);
+      // Add both participants (insert self first to satisfy RLS)
+      const { error: addMeError } = await supabase.from("conversation_participants").insert({
+        conversation_id: newConversation.id,
+        user_id: user.id,
+      });
 
-      if (participantsError) {
+      if (addMeError) {
+        throw new Error("Failed to add participants");
+      }
+
+      const { error: addOtherError } = await supabase.from("conversation_participants").insert({
+        conversation_id: newConversation.id,
+        user_id: userId,
+      });
+
+      if (addOtherError) {
         throw new Error("Failed to add participants");
       }
 
