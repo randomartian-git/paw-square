@@ -17,6 +17,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import PetCard from "@/components/profile/PetCard";
 import PetPhotoGallery from "@/components/profile/PetPhotoGallery";
+import ImageCropDialog from "@/components/profile/ImageCropDialog";
 import { formatDistanceToNow } from "date-fns";
 
 type Profile = {
@@ -81,6 +82,12 @@ const Profile = () => {
   const [galleryPet, setGalleryPet] = useState<Pet | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [avatarProgress, setAvatarProgress] = useState(0);
+  const [bannerProgress, setBannerProgress] = useState(0);
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
+  const [bannerCropDialogOpen, setBannerCropDialogOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string>("");
+  const [selectedBannerImage, setSelectedBannerImage] = useState<string>("");
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
@@ -225,16 +232,47 @@ const Profile = () => {
     }
   };
 
-  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !user) return;
+    if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast({ title: "Image must be less than 5MB", variant: "destructive" });
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: "Image must be less than 10MB", variant: "destructive" });
       return;
     }
 
+    const reader = new FileReader();
+    reader.onload = () => {
+      setSelectedImage(reader.result as string);
+      setCropDialogOpen(true);
+    };
+    reader.readAsDataURL(file);
+    if (avatarInputRef.current) avatarInputRef.current.value = '';
+  };
+
+  const handleBannerFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: "Image must be less than 10MB", variant: "destructive" });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setSelectedBannerImage(reader.result as string);
+      setBannerCropDialogOpen(true);
+    };
+    reader.readAsDataURL(file);
+    if (bannerInputRef.current) bannerInputRef.current.value = '';
+  };
+
+  const handleAvatarCropComplete = async (croppedBlob: Blob) => {
+    if (!user) return;
+
     setUploadingAvatar(true);
+    setAvatarProgress(0);
 
     try {
       // Delete old avatar if exists
@@ -244,16 +282,16 @@ const Profile = () => {
           await supabase.storage.from('profile-images').remove([decodeURIComponent(oldPath)]);
         }
       }
+      setAvatarProgress(20);
 
-      const fileExt = file.name.split('.').pop();
-      // Use timestamp to bust cache and ensure unique filename
-      const filePath = `${user.id}/avatar_${Date.now()}.${fileExt}`;
+      const filePath = `${user.id}/avatar_${Date.now()}.jpg`;
 
       const { error: uploadError } = await supabase.storage
         .from('profile-images')
-        .upload(filePath, file);
+        .upload(filePath, croppedBlob, { contentType: 'image/jpeg' });
 
       if (uploadError) throw uploadError;
+      setAvatarProgress(70);
 
       const { data: { publicUrl } } = supabase.storage
         .from('profile-images')
@@ -265,27 +303,24 @@ const Profile = () => {
         .eq('user_id', user.id);
 
       if (updateError) throw updateError;
+      setAvatarProgress(100);
 
       setProfile(prev => prev ? { ...prev, avatar_url: publicUrl } : null);
       toast({ title: "Profile picture updated!" });
+      setCropDialogOpen(false);
     } catch (error: any) {
       toast({ title: "Error uploading image", description: error.message, variant: "destructive" });
     } finally {
       setUploadingAvatar(false);
-      if (avatarInputRef.current) avatarInputRef.current.value = '';
+      setAvatarProgress(0);
     }
   };
 
-  const handleBannerUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !user) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast({ title: "Image must be less than 5MB", variant: "destructive" });
-      return;
-    }
+  const handleBannerCropComplete = async (croppedBlob: Blob) => {
+    if (!user) return;
 
     setUploadingBanner(true);
+    setBannerProgress(0);
 
     try {
       // Delete old banner if exists
@@ -295,16 +330,16 @@ const Profile = () => {
           await supabase.storage.from('profile-images').remove([decodeURIComponent(oldPath)]);
         }
       }
+      setBannerProgress(20);
 
-      const fileExt = file.name.split('.').pop();
-      // Use timestamp to bust cache and ensure unique filename
-      const filePath = `${user.id}/banner_${Date.now()}.${fileExt}`;
+      const filePath = `${user.id}/banner_${Date.now()}.jpg`;
 
       const { error: uploadError } = await supabase.storage
         .from('profile-images')
-        .upload(filePath, file);
+        .upload(filePath, croppedBlob, { contentType: 'image/jpeg' });
 
       if (uploadError) throw uploadError;
+      setBannerProgress(70);
 
       const { data: { publicUrl } } = supabase.storage
         .from('profile-images')
@@ -316,14 +351,16 @@ const Profile = () => {
         .eq('user_id', user.id);
 
       if (updateError) throw updateError;
+      setBannerProgress(100);
 
       setProfile(prev => prev ? { ...prev, banner_url: publicUrl } : null);
       toast({ title: "Banner updated!" });
+      setBannerCropDialogOpen(false);
     } catch (error: any) {
       toast({ title: "Error uploading banner", description: error.message, variant: "destructive" });
     } finally {
       setUploadingBanner(false);
-      if (bannerInputRef.current) bannerInputRef.current.value = '';
+      setBannerProgress(0);
     }
   };
 
@@ -489,7 +526,7 @@ const Profile = () => {
               ref={bannerInputRef}
               type="file"
               accept="image/*"
-              onChange={handleBannerUpload}
+              onChange={handleBannerFileSelect}
               className="hidden"
             />
           </div>
@@ -528,7 +565,7 @@ const Profile = () => {
                   ref={avatarInputRef}
                   type="file"
                   accept="image/*"
-                  onChange={handleAvatarUpload}
+                  onChange={handleAvatarFileSelect}
                   className="hidden"
                 />
               </div>
@@ -852,6 +889,29 @@ const Profile = () => {
         isOpen={!!galleryPet}
         onClose={() => setGalleryPet(null)}
         onPhotoUpdated={fetchData}
+      />
+
+      {/* Image Crop Dialogs */}
+      <ImageCropDialog
+        open={cropDialogOpen}
+        onOpenChange={setCropDialogOpen}
+        imageSrc={selectedImage}
+        aspectRatio={1}
+        title="Crop Profile Picture"
+        onCropComplete={handleAvatarCropComplete}
+        uploadProgress={avatarProgress}
+        isUploading={uploadingAvatar}
+      />
+
+      <ImageCropDialog
+        open={bannerCropDialogOpen}
+        onOpenChange={setBannerCropDialogOpen}
+        imageSrc={selectedBannerImage}
+        aspectRatio={16 / 5}
+        title="Crop Banner"
+        onCropComplete={handleBannerCropComplete}
+        uploadProgress={bannerProgress}
+        isUploading={uploadingBanner}
       />
     </div>
   );
