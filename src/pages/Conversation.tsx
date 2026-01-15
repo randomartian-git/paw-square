@@ -8,6 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
+import TypingIndicator from "@/components/TypingIndicator";
+import OnlineIndicator from "@/components/OnlineIndicator";
+import { usePresence } from "@/hooks/usePresence";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 
@@ -34,6 +37,8 @@ const Conversation = () => {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const { otherUserPresence, setTyping } = usePresence(conversationId, user?.id);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -189,15 +194,27 @@ const Conversation = () => {
             className="flex items-center gap-3 flex-1 cursor-pointer"
             onClick={() => otherUser && navigate(`/profile/${otherUser.user_id}`)}
           >
-            <Avatar className="w-10 h-10">
-              <AvatarImage src={otherUser?.avatar_url || undefined} />
-              <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground">
-                {otherUser?.display_name?.[0]?.toUpperCase() || "?"}
-              </AvatarFallback>
-            </Avatar>
-            <h2 className="font-semibold hover:text-primary transition-colors">
-              {otherUser?.display_name || "Unknown User"}
-            </h2>
+            <div className="relative">
+              <Avatar className="w-10 h-10">
+                <AvatarImage src={otherUser?.avatar_url || undefined} />
+                <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground">
+                  {otherUser?.display_name?.[0]?.toUpperCase() || "?"}
+                </AvatarFallback>
+              </Avatar>
+              <OnlineIndicator
+                isOnline={otherUserPresence?.isOnline ?? false}
+                size="sm"
+                className="absolute -bottom-0.5 -right-0.5"
+              />
+            </div>
+            <div>
+              <h2 className="font-semibold hover:text-primary transition-colors">
+                {otherUser?.display_name || "Unknown User"}
+              </h2>
+              {otherUserPresence?.isOnline && (
+                <span className="text-xs text-green-500">Online</span>
+              )}
+            </div>
           </div>
         </motion.div>
 
@@ -239,6 +256,7 @@ const Conversation = () => {
               );
             })
           )}
+          {otherUserPresence?.isTyping && <TypingIndicator />}
           <div ref={messagesEndRef} />
         </div>
 
@@ -251,8 +269,12 @@ const Conversation = () => {
           <Textarea
             placeholder="Type a message..."
             value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
+            onChange={(e) => {
+              setNewMessage(e.target.value);
+              setTyping(e.target.value.length > 0);
+            }}
             onKeyDown={handleKeyDown}
+            onBlur={() => setTyping(false)}
             className="resize-none min-h-[44px] max-h-32"
             rows={1}
           />
