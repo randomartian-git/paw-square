@@ -18,10 +18,13 @@ type Profile = {
   display_name: string | null;
   bio: string | null;
   avatar_url: string | null;
+  banner_url: string | null;
   location: string | null;
   created_at: string;
   followers_count: number;
   following_count: number;
+  flair: string[] | null;
+  custom_flair: string | null;
 };
 
 type Pet = {
@@ -264,7 +267,15 @@ const UserProfile = () => {
           animate={{ opacity: 1, y: 0 }}
           className="bg-card rounded-2xl border border-border overflow-hidden mb-8"
         >
-          <div className="h-32 bg-gradient-to-r from-primary/30 via-accent/30 to-tertiary/30" />
+          {profile.banner_url ? (
+            <img 
+              src={profile.banner_url} 
+              alt="Profile banner" 
+              className="h-32 w-full object-cover"
+            />
+          ) : (
+            <div className="h-32 bg-gradient-to-r from-primary/30 via-accent/30 to-tertiary/30" />
+          )}
 
           <div className="px-6 pb-6">
             <div className="flex flex-col sm:flex-row sm:items-end gap-4 -mt-12">
@@ -276,7 +287,24 @@ const UserProfile = () => {
               </Avatar>
 
               <div className="flex-1">
-                <h1 className="text-2xl font-display font-bold">{profile.display_name || "Pet Lover"}</h1>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-2xl font-display font-bold">{profile.display_name || "Pet Lover"}</h1>
+                  {/* Display flairs */}
+                  {profile.flair && profile.flair.length > 0 && (
+                    <div className="flex items-center gap-1">
+                      {profile.flair.map((f, i) => (
+                        <Badge key={i} variant="secondary" className="text-xs">
+                          {f}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  {profile.custom_flair && (
+                    <Badge className="bg-gradient-to-r from-primary to-accent text-primary-foreground text-xs">
+                      {profile.custom_flair}
+                    </Badge>
+                  )}
+                </div>
                 <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground flex-wrap">
                   {profile.location && (
                     <span className="flex items-center gap-1">
