@@ -49,6 +49,8 @@ interface Post {
   created_at: string;
   user_id: string;
   image_url: string | null;
+  video_url: string | null;
+  media_caption: string | null;
   author?: {
     display_name: string | null;
     avatar_url: string | null;
@@ -462,14 +464,25 @@ const PostDetail = () => {
               <h1 className="text-2xl font-display font-bold">{post.title}</h1>
             </div>
 
-            {/* Post Image */}
-            {post.image_url && (
+            {/* Post Media (Image or Video) */}
+            {(post.image_url || post.video_url) && (
               <div className="p-6 border-b border-border">
-                <img 
-                  src={post.image_url} 
-                  alt={post.title}
-                  className="w-full max-h-[500px] object-contain rounded-xl bg-muted"
-                />
+                {post.video_url ? (
+                  <video 
+                    src={post.video_url} 
+                    controls
+                    className="w-full max-h-[500px] object-contain rounded-xl bg-muted"
+                  />
+                ) : post.image_url && (
+                  <img 
+                    src={post.image_url} 
+                    alt={post.title}
+                    className="w-full max-h-[500px] object-contain rounded-xl bg-muted"
+                  />
+                )}
+                {post.media_caption && (
+                  <p className="mt-3 text-sm text-muted-foreground italic">{post.media_caption}</p>
+                )}
               </div>
             )}
 
