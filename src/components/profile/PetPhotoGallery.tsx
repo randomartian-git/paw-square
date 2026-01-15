@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload, Trash2, ChevronLeft, ChevronRight, Dog, Cat, Bird, Fish, Rabbit, Sparkles } from "lucide-react";
+import { Upload, Trash2, ChevronLeft, ChevronRight, Dog, Cat, Bird, Fish, Rabbit, Sparkles, Pencil, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -39,7 +41,13 @@ const PetPhotoGallery = ({ pet, isOpen, onClose, onPhotoUpdated }: PetPhotoGalle
   const [photos, setPhotos] = useState<{ id: string; photo_url: string; caption?: string | null }[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingCaption, setPendingCaption] = useState("");
+  const [showCaptionInput, setShowCaptionInput] = useState(false);
+  const [editingCaption, setEditingCaption] = useState(false);
+  const [editCaptionValue, setEditCaptionValue] = useState("");
 
   useEffect(() => {
     if (pet && isOpen) {
@@ -73,7 +81,7 @@ const PetPhotoGallery = ({ pet, isOpen, onClose, onPhotoUpdated }: PetPhotoGalle
     setIsLoading(false);
   };
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !pet || !user) return;
 
@@ -87,38 +95,97 @@ const PetPhotoGallery = ({ pet, isOpen, onClose, onPhotoUpdated }: PetPhotoGalle
       return;
     }
 
-    setIsUploading(true);
+    setPendingFile(file);
+    setPendingCaption("");
+    setShowCaptionInput(true);
+    e.target.value = "";
+  };
 
-    const fileExt = file.name.split(".").pop();
+  const handleUpload = async () => {
+    if (!pendingFile || !pet || !user) return;
+
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    const fileExt = pendingFile.name.split(".").pop();
     const fileName = `${user.id}/${pet.id}_${Date.now()}.${fileExt}`;
+
+    // Simulate progress for upload
+    const progressInterval = setInterval(() => {
+      setUploadProgress(prev => Math.min(prev + 10, 90));
+    }, 100);
 
     const { error: uploadError } = await supabase.storage
       .from("pet-photos")
-      .upload(fileName, file);
+      .upload(fileName, pendingFile);
+
+    clearInterval(progressInterval);
 
     if (uploadError) {
       toast({ title: "Error uploading photo", description: uploadError.message, variant: "destructive" });
-    } else {
-      // Get the public URL and save to pet_photos table
-      const { data: publicUrl } = supabase.storage.from("pet-photos").getPublicUrl(fileName);
-      
-      const { error: insertError } = await supabase.from("pet_photos").insert({
-        pet_id: pet.id,
-        user_id: user.id,
-        photo_url: publicUrl.publicUrl
-      });
+      setIsUploading(false);
+      setUploadProgress(0);
+      return;
+    }
 
-      if (insertError) {
-        toast({ title: "Error saving photo", description: insertError.message, variant: "destructive" });
-      } else {
-        toast({ title: "Photo uploaded! 📸" });
-        fetchPhotos();
-        onPhotoUpdated();
-      }
+    setUploadProgress(95);
+
+    // Get the public URL and save to pet_photos table
+    const { data: publicUrl } = supabase.storage.from("pet-photos").getPublicUrl(fileName);
+    
+    const { error: insertError } = await supabase.from("pet_photos").insert({
+      pet_id: pet.id,
+      user_id: user.id,
+      photo_url: publicUrl.publicUrl,
+      caption: pendingCaption.trim() || null
+    });
+
+    if (insertError) {
+      toast({ title: "Error saving photo", description: insertError.message, variant: "destructive" });
+    } else {
+      setUploadProgress(100);
+      toast({ title: "Photo uploaded! 📸" });
+      fetchPhotos();
+      onPhotoUpdated();
     }
 
     setIsUploading(false);
-    e.target.value = "";
+    setUploadProgress(0);
+    setPendingFile(null);
+    setPendingCaption("");
+    setShowCaptionInput(false);
+  };
+
+  const handleCancelUpload = () => {
+    setPendingFile(null);
+    setPendingCaption("");
+    setShowCaptionInput(false);
+  };
+
+  const handleEditCaption = async (photoId: string) => {
+    if (photoId === "main") return;
+
+    const { error } = await supabase
+      .from("pet_photos")
+      .update({ caption: editCaptionValue.trim() || null })
+      .eq("id", photoId);
+
+    if (error) {
+      toast({ title: "Error updating caption", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Caption updated!" });
+      setPhotos(prev => prev.map(p => 
+        p.id === photoId ? { ...p, caption: editCaptionValue.trim() || null } : p
+      ));
+    }
+    setEditingCaption(false);
+    setEditCaptionValue("");
+  };
+
+  const startEditCaption = () => {
+    const currentCaption = photos[selectedIndex]?.caption || "";
+    setEditCaptionValue(currentCaption);
+    setEditingCaption(true);
   };
 
   const handleDelete = async (photo: { id: string; photo_url: string }) => {
@@ -233,11 +300,36 @@ const PetPhotoGallery = ({ pet, isOpen, onClose, onPhotoUpdated }: PetPhotoGalle
                 )}
 
                 {/* Photo Caption */}
-                {photos[selectedIndex].caption && (
-                  <div className="absolute bottom-14 left-2 right-2 px-3 py-2 rounded-lg bg-background/80 backdrop-blur-sm">
-                    <p className="text-sm text-foreground">{photos[selectedIndex].caption}</p>
-                  </div>
-                )}
+                <div className="absolute bottom-14 left-2 right-2 px-3 py-2 rounded-lg bg-background/80 backdrop-blur-sm">
+                  {editingCaption ? (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={editCaptionValue}
+                        onChange={(e) => setEditCaptionValue(e.target.value)}
+                        placeholder="Add a caption..."
+                        className="h-8 text-sm"
+                        autoFocus
+                      />
+                      <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => handleEditCaption(photos[selectedIndex].id)}>
+                        <Check className="w-4 h-4" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => setEditingCaption(false)}>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm text-foreground flex-1">
+                        {photos[selectedIndex].caption || <span className="text-muted-foreground italic">No caption</span>}
+                      </p>
+                      {photos[selectedIndex].id !== "main" && (
+                        <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0" onClick={startEditCaption}>
+                          <Pencil className="w-3 h-3" />
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
 
                 {/* Photo Actions */}
                 <div className="absolute bottom-2 right-2 flex gap-2">
@@ -299,22 +391,66 @@ const PetPhotoGallery = ({ pet, isOpen, onClose, onPhotoUpdated }: PetPhotoGalle
             </div>
           )}
 
-          {/* Upload Button */}
-          <div className="flex justify-center">
-            <label>
-              <Button asChild variant="outline" disabled={isUploading}>
-                <span className="cursor-pointer">
-                  <Upload className="w-4 h-4 mr-2" />
-                  {isUploading ? "Uploading..." : "Add Photo"}
-                </span>
-              </Button>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleUpload}
-                className="hidden"
-              />
-            </label>
+          {/* Upload Section */}
+          <div className="space-y-4">
+            {showCaptionInput && pendingFile && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-muted/50 rounded-lg p-4 space-y-3"
+              >
+                <div className="flex items-center gap-3">
+                  <img 
+                    src={URL.createObjectURL(pendingFile)} 
+                    alt="Preview" 
+                    className="w-16 h-16 object-cover rounded-lg"
+                  />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{pendingFile.name}</p>
+                    <p className="text-xs text-muted-foreground">{(pendingFile.size / 1024).toFixed(1)} KB</p>
+                  </div>
+                </div>
+                <Input
+                  value={pendingCaption}
+                  onChange={(e) => setPendingCaption(e.target.value)}
+                  placeholder="Add a caption (optional)..."
+                  className="text-sm"
+                />
+                {isUploading && (
+                  <div className="space-y-1">
+                    <Progress value={uploadProgress} className="h-2" />
+                    <p className="text-xs text-muted-foreground text-center">{uploadProgress}%</p>
+                  </div>
+                )}
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" size="sm" onClick={handleCancelUpload} disabled={isUploading}>
+                    Cancel
+                  </Button>
+                  <Button size="sm" onClick={handleUpload} disabled={isUploading}>
+                    {isUploading ? "Uploading..." : "Upload"}
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+
+            {!showCaptionInput && (
+              <div className="flex justify-center">
+                <label>
+                  <Button asChild variant="outline" disabled={isUploading}>
+                    <span className="cursor-pointer">
+                      <Upload className="w-4 h-4 mr-2" />
+                      Add Photo
+                    </span>
+                  </Button>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+            )}
           </div>
         </div>
       </DialogContent>

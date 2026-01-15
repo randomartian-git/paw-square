@@ -519,11 +519,28 @@ const PostCard = ({ post, index, isLiked, isBookmarked, onLike, onBookmark }: Po
   const handleShare = async (e: React.MouseEvent) => {
     e.stopPropagation();
     const url = `${window.location.origin}/post/${post.id}`;
+    const shareData = {
+      title: post.title,
+      text: post.content.slice(0, 100) + (post.content.length > 100 ? "..." : ""),
+      url
+    };
+
     try {
-      await navigator.clipboard.writeText(url);
-      toast({ title: "Link copied to clipboard!" });
-    } catch {
-      toast({ title: "Failed to copy link", variant: "destructive" });
+      if (navigator.share && navigator.canShare?.(shareData)) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast({ title: "Link copied to clipboard!" });
+      }
+    } catch (err) {
+      if ((err as Error).name !== "AbortError") {
+        try {
+          await navigator.clipboard.writeText(url);
+          toast({ title: "Link copied to clipboard!" });
+        } catch {
+          toast({ title: "Failed to share", variant: "destructive" });
+        }
+      }
     }
   };
 
