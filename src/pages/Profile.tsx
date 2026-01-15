@@ -537,16 +537,16 @@ const Profile = () => {
           </div>
           
           {/* Profile Info */}
-          <div className="px-6 pb-6">
-            <div className="flex flex-col sm:flex-row sm:items-end gap-4 -mt-12">
+          <div className="px-6 py-6">
+            <div className="flex flex-col sm:flex-row sm:items-start gap-4">
               <div className="relative group">
                 <div 
                   className="cursor-pointer"
                   onClick={() => avatarInputRef.current?.click()}
                 >
-                  <Avatar className="w-24 h-24 border-4 border-card">
+                  <Avatar className="w-20 h-20 border-4 border-card">
                     <AvatarImage src={profile?.avatar_url || undefined} />
-                    <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-3xl text-primary-foreground">
+                    <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-2xl text-primary-foreground">
                       {profile?.display_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "?"}
                     </AvatarFallback>
                   </Avatar>
