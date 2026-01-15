@@ -574,7 +574,7 @@ const PostCard = ({ post, index, isLiked, isBookmarked, onLike, onBookmark }: Po
                 : "hover:bg-muted text-muted-foreground hover:text-foreground"
             }`}
           >
-            <ChevronUp className="w-5 h-5" />
+            <Heart className={`w-5 h-5 ${isLiked ? "fill-current" : ""}`} />
           </button>
           <span className={`font-bold ${isLiked ? "text-accent" : "text-muted-foreground"}`}>
             {post.likes_count}
