@@ -237,9 +237,6 @@ const Profile = () => {
     setUploadingAvatar(true);
 
     try {
-      const fileExt = file.name.split('.').pop();
-      const filePath = `${user.id}/avatar.${fileExt}`;
-
       // Delete old avatar if exists
       if (profile?.avatar_url) {
         const oldPath = profile.avatar_url.split('/profile-images/')[1];
@@ -248,9 +245,13 @@ const Profile = () => {
         }
       }
 
+      const fileExt = file.name.split('.').pop();
+      // Use timestamp to bust cache and ensure unique filename
+      const filePath = `${user.id}/avatar_${Date.now()}.${fileExt}`;
+
       const { error: uploadError } = await supabase.storage
         .from('profile-images')
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
@@ -287,9 +288,6 @@ const Profile = () => {
     setUploadingBanner(true);
 
     try {
-      const fileExt = file.name.split('.').pop();
-      const filePath = `${user.id}/banner.${fileExt}`;
-
       // Delete old banner if exists
       if (profile?.banner_url) {
         const oldPath = profile.banner_url.split('/profile-images/')[1];
@@ -298,9 +296,13 @@ const Profile = () => {
         }
       }
 
+      const fileExt = file.name.split('.').pop();
+      // Use timestamp to bust cache and ensure unique filename
+      const filePath = `${user.id}/banner_${Date.now()}.${fileExt}`;
+
       const { error: uploadError } = await supabase.storage
         .from('profile-images')
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
