@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { MapPin, Calendar, Dog, Cat, Bird, Fish, Rabbit, Sparkles, Heart, MessageSquare } from "lucide-react";
+import { MapPin, Calendar, Dog, Cat, Bird, Fish, Rabbit, Sparkles, Heart, MessageSquare, Mail } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import { formatDistanceToNow } from "date-fns";
+import { toast } from "sonner";
 
 type Profile = {
   id: string;
@@ -49,10 +52,12 @@ const petTypeIcons: Record<string, any> = {
 const UserProfile = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [pets, setPets] = useState<Pet[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [startingConversation, setStartingConversation] = useState(false);
 
   useEffect(() => {
     if (userId) fetchData();
@@ -72,6 +77,74 @@ const UserProfile = () => {
     if (petsRes.data) setPets(petsRes.data);
     if (postsRes.data) setPosts(postsRes.data);
     setLoading(false);
+  };
+
+  const handleStartConversation = async () => {
+    if (!user) {
+      toast.error("Please sign in to send messages");
+      navigate("/auth");
+      return;
+    }
+
+    if (!userId || userId === user.id) return;
+
+    setStartingConversation(true);
+
+    try {
+      // Check if a conversation already exists between these users
+      const { data: myConversations } = await supabase
+        .from("conversation_participants")
+        .select("conversation_id")
+        .eq("user_id", user.id);
+
+      if (myConversations && myConversations.length > 0) {
+        const conversationIds = myConversations.map((c) => c.conversation_id);
+
+        const { data: existingConv } = await supabase
+          .from("conversation_participants")
+          .select("conversation_id")
+          .eq("user_id", userId)
+          .in("conversation_id", conversationIds)
+          .limit(1)
+          .single();
+
+        if (existingConv) {
+          // Conversation exists, navigate to it
+          navigate(`/messages/${existingConv.conversation_id}`);
+          return;
+        }
+      }
+
+      // Create new conversation
+      const { data: newConversation, error: convError } = await supabase
+        .from("conversations")
+        .insert({})
+        .select()
+        .single();
+
+      if (convError || !newConversation) {
+        throw new Error("Failed to create conversation");
+      }
+
+      // Add both participants
+      const { error: participantsError } = await supabase
+        .from("conversation_participants")
+        .insert([
+          { conversation_id: newConversation.id, user_id: user.id },
+          { conversation_id: newConversation.id, user_id: userId },
+        ]);
+
+      if (participantsError) {
+        throw new Error("Failed to add participants");
+      }
+
+      navigate(`/messages/${newConversation.id}`);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to start conversation");
+    } finally {
+      setStartingConversation(false);
+    }
   };
 
   if (loading) {
@@ -136,6 +209,17 @@ const UserProfile = () => {
                   </span>
                 </div>
               </div>
+
+              {user && userId !== user.id && (
+                <Button
+                  onClick={handleStartConversation}
+                  disabled={startingConversation}
+                  className="bg-gradient-hero shadow-glow"
+                >
+                  <Mail className="w-4 h-4 mr-2" />
+                  {startingConversation ? "Starting..." : "Message"}
+                </Button>
+              )}
             </div>
 
             {profile.bio && (
