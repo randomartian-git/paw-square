@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   MapPin, Calendar, Edit2, Plus, Dog, BookmarkIcon, MessageSquare,
-  Heart, Award, Camera, X, Loader2, Trash2
+  Heart, Award, Camera, X, Loader2, Trash2, Users
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ import Navbar from "@/components/Navbar";
 import PetCard from "@/components/profile/PetCard";
 import PetPhotoGallery from "@/components/profile/PetPhotoGallery";
 import ImageCropDialog from "@/components/profile/ImageCropDialog";
+import FollowersModal from "@/components/FollowersModal";
 import { formatDistanceToNow } from "date-fns";
 
 type Profile = {
@@ -31,6 +32,8 @@ type Profile = {
   created_at: string;
   flair: string[] | null;
   custom_flair: string | null;
+  followers_count: number;
+  following_count: number;
 };
 
 type Pet = {
@@ -90,6 +93,8 @@ const Profile = () => {
   const [selectedBannerImage, setSelectedBannerImage] = useState<string>("");
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
+  const [followersModalOpen, setFollowersModalOpen] = useState(false);
+  const [followersModalTab, setFollowersModalTab] = useState<"followers" | "following">("followers");
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -595,6 +600,30 @@ const Profile = () => {
                     Joined {formatDistanceToNow(new Date(profile?.created_at || new Date()), { addSuffix: true })}
                   </span>
                 </div>
+                {/* Follower stats */}
+                <div className="flex items-center gap-4 mt-2 text-sm">
+                  <button
+                    onClick={() => {
+                      setFollowersModalTab("followers");
+                      setFollowersModalOpen(true);
+                    }}
+                    className="flex items-center gap-1 hover:text-primary transition-colors"
+                  >
+                    <Users className="w-4 h-4 text-primary" />
+                    <span className="font-semibold">{profile?.followers_count ?? 0}</span>
+                    <span className="text-muted-foreground">followers</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setFollowersModalTab("following");
+                      setFollowersModalOpen(true);
+                    }}
+                    className="flex items-center gap-1 hover:text-primary transition-colors"
+                  >
+                    <span className="font-semibold">{profile?.following_count ?? 0}</span>
+                    <span className="text-muted-foreground">following</span>
+                  </button>
+                </div>
               </div>
               
               <div className="flex gap-2">
@@ -913,6 +942,16 @@ const Profile = () => {
         uploadProgress={bannerProgress}
         isUploading={uploadingBanner}
       />
+
+      {/* Followers Modal */}
+      {user && (
+        <FollowersModal
+          open={followersModalOpen}
+          onOpenChange={setFollowersModalOpen}
+          userId={user.id}
+          initialTab={followersModalTab}
+        />
+      )}
     </div>
   );
 };
