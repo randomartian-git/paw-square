@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
+import FollowersModal from "@/components/FollowersModal";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 
@@ -62,6 +63,8 @@ const UserProfile = () => {
   const [startingConversation, setStartingConversation] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
+  const [followersModalOpen, setFollowersModalOpen] = useState(false);
+  const [followersModalTab, setFollowersModalTab] = useState<"followers" | "following">("followers");
 
   useEffect(() => {
     if (userId) fetchData();
@@ -288,15 +291,27 @@ const UserProfile = () => {
                 </div>
                 {/* Follower stats */}
                 <div className="flex items-center gap-4 mt-2 text-sm">
-                  <span className="flex items-center gap-1">
+                  <button
+                    onClick={() => {
+                      setFollowersModalTab("followers");
+                      setFollowersModalOpen(true);
+                    }}
+                    className="flex items-center gap-1 hover:text-primary transition-colors"
+                  >
                     <Users className="w-4 h-4 text-primary" />
                     <span className="font-semibold">{profile.followers_count}</span>
                     <span className="text-muted-foreground">followers</span>
-                  </span>
-                  <span className="flex items-center gap-1">
+                  </button>
+                  <button
+                    onClick={() => {
+                      setFollowersModalTab("following");
+                      setFollowersModalOpen(true);
+                    }}
+                    className="flex items-center gap-1 hover:text-primary transition-colors"
+                  >
                     <span className="font-semibold">{profile.following_count}</span>
                     <span className="text-muted-foreground">following</span>
-                  </span>
+                  </button>
                 </div>
               </div>
 
@@ -416,6 +431,16 @@ const UserProfile = () => {
           </motion.div>
         </div>
       </main>
+
+      {/* Followers Modal */}
+      {userId && (
+        <FollowersModal
+          open={followersModalOpen}
+          onOpenChange={setFollowersModalOpen}
+          userId={userId}
+          initialTab={followersModalTab}
+        />
+      )}
     </div>
   );
 };
