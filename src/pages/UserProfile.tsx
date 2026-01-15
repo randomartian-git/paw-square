@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { MapPin, Calendar, Dog, Cat, Bird, Fish, Rabbit, Sparkles, Heart, MessageSquare, Mail } from "lucide-react";
+import { MapPin, Calendar, Dog, Cat, Bird, Fish, Rabbit, Sparkles, Heart, MessageSquare, Mail, UserPlus, UserCheck, Users } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,8 @@ type Profile = {
   avatar_url: string | null;
   location: string | null;
   created_at: string;
+  followers_count: number;
+  following_count: number;
 };
 
 type Pet = {
@@ -58,6 +60,8 @@ const UserProfile = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [startingConversation, setStartingConversation] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
 
   useEffect(() => {
     if (userId) fetchData();
@@ -76,7 +80,68 @@ const UserProfile = () => {
     if (profileRes.data) setProfile(profileRes.data);
     if (petsRes.data) setPets(petsRes.data);
     if (postsRes.data) setPosts(postsRes.data);
+
+    // Check if current user is following this profile
+    if (user && userId !== user.id) {
+      const { data: followData } = await supabase
+        .from("follows")
+        .select("id")
+        .eq("follower_id", user.id)
+        .eq("following_id", userId)
+        .maybeSingle();
+      setIsFollowing(!!followData);
+    }
+
     setLoading(false);
+  };
+
+  const handleFollow = async () => {
+    if (!user) {
+      toast.error("Please sign in to follow users");
+      navigate("/auth");
+      return;
+    }
+    if (!userId || userId === user.id) return;
+
+    setFollowLoading(true);
+
+    try {
+      if (isFollowing) {
+        // Unfollow
+        const { error } = await supabase
+          .from("follows")
+          .delete()
+          .eq("follower_id", user.id)
+          .eq("following_id", userId);
+
+        if (error) throw error;
+
+        setIsFollowing(false);
+        setProfile((prev) =>
+          prev ? { ...prev, followers_count: Math.max(0, prev.followers_count - 1) } : prev
+        );
+        toast.success("Unfollowed successfully");
+      } else {
+        // Follow
+        const { error } = await supabase.from("follows").insert({
+          follower_id: user.id,
+          following_id: userId,
+        });
+
+        if (error) throw error;
+
+        setIsFollowing(true);
+        setProfile((prev) =>
+          prev ? { ...prev, followers_count: prev.followers_count + 1 } : prev
+        );
+        toast.success("Following!");
+      }
+    } catch (error) {
+      console.error("[Follow]", error);
+      toast.error("Failed to update follow status");
+    } finally {
+      setFollowLoading(false);
+    }
   };
 
   const handleStartConversation = async () => {
@@ -209,7 +274,7 @@ const UserProfile = () => {
 
               <div className="flex-1">
                 <h1 className="text-2xl font-display font-bold">{profile.display_name || "Pet Lover"}</h1>
-                <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground flex-wrap">
                   {profile.location && (
                     <span className="flex items-center gap-1">
                       <MapPin className="w-4 h-4" />
@@ -221,17 +286,49 @@ const UserProfile = () => {
                     Joined {formatDistanceToNow(new Date(profile.created_at), { addSuffix: true })}
                   </span>
                 </div>
+                {/* Follower stats */}
+                <div className="flex items-center gap-4 mt-2 text-sm">
+                  <span className="flex items-center gap-1">
+                    <Users className="w-4 h-4 text-primary" />
+                    <span className="font-semibold">{profile.followers_count}</span>
+                    <span className="text-muted-foreground">followers</span>
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="font-semibold">{profile.following_count}</span>
+                    <span className="text-muted-foreground">following</span>
+                  </span>
+                </div>
               </div>
 
               {user && userId !== user.id && (
-                <Button
-                  onClick={handleStartConversation}
-                  disabled={startingConversation}
-                  className="bg-gradient-hero shadow-glow"
-                >
-                  <Mail className="w-4 h-4 mr-2" />
-                  {startingConversation ? "Starting..." : "Message"}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleFollow}
+                    disabled={followLoading}
+                    variant={isFollowing ? "outline" : "default"}
+                    className={isFollowing ? "" : "bg-gradient-hero shadow-glow"}
+                  >
+                    {isFollowing ? (
+                      <>
+                        <UserCheck className="w-4 h-4 mr-2" />
+                        Following
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="w-4 h-4 mr-2" />
+                        Follow
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    onClick={handleStartConversation}
+                    disabled={startingConversation}
+                    variant="outline"
+                  >
+                    <Mail className="w-4 h-4 mr-2" />
+                    {startingConversation ? "..." : "Message"}
+                  </Button>
+                </div>
               )}
             </div>
 
