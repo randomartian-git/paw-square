@@ -222,12 +222,14 @@ export type Database = {
           id: string
           image_url: string | null
           likes_count: number
+          media_caption: string | null
           pet_type: string | null
           tags: string[] | null
           title: string
           topic: string | null
           updated_at: string
           user_id: string
+          video_url: string | null
         }
         Insert: {
           category: string
@@ -237,12 +239,14 @@ export type Database = {
           id?: string
           image_url?: string | null
           likes_count?: number
+          media_caption?: string | null
           pet_type?: string | null
           tags?: string[] | null
           title: string
           topic?: string | null
           updated_at?: string
           user_id: string
+          video_url?: string | null
         }
         Update: {
           category?: string
@@ -252,12 +256,14 @@ export type Database = {
           id?: string
           image_url?: string | null
           likes_count?: number
+          media_caption?: string | null
           pet_type?: string | null
           tags?: string[] | null
           title?: string
           topic?: string | null
           updated_at?: string
           user_id?: string
+          video_url?: string | null
         }
         Relationships: []
       }

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ArrowLeft, HelpCircle, MessageSquare, Lightbulb, Camera, AlertTriangle,
-  Dog, Cat, Bird, Fish, Rabbit, Sparkles, Upload, X, Image as ImageIcon
+  Dog, Cat, Bird, Fish, Rabbit, Sparkles, Upload, X, Image as ImageIcon, Video
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +19,7 @@ const postTypes = [
   { id: "question", label: "Question", icon: HelpCircle, color: "bg-blue-500/20 text-blue-400" },
   { id: "discussion", label: "Discussion", icon: MessageSquare, color: "bg-purple-500/20 text-purple-400" },
   { id: "tip", label: "Tip", icon: Lightbulb, color: "bg-yellow-500/20 text-yellow-400" },
-  { id: "photo", label: "Photo", icon: Camera, color: "bg-green-500/20 text-green-400" },
+  { id: "photo", label: "Photo/Video", icon: Camera, color: "bg-green-500/20 text-green-400" },
   { id: "emergency", label: "Emergency", icon: AlertTriangle, color: "bg-red-500/20 text-red-400" },
 ];
 
@@ -47,6 +47,9 @@ const CreatePost = () => {
   const [loading, setLoading] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoPreview, setVideoPreview] = useState<string | null>(null);
+  const [mediaCaption, setMediaCaption] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
@@ -82,14 +85,42 @@ const CreatePost = () => {
     }
 
     setImageFile(file);
+    setVideoFile(null);
+    setVideoPreview(null);
     const reader = new FileReader();
     reader.onloadend = () => setImagePreview(reader.result as string);
     reader.readAsDataURL(file);
   };
 
+  const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("video/")) {
+      toast({ title: "Please select a video file", variant: "destructive" });
+      return;
+    }
+
+    if (file.size > 50 * 1024 * 1024) {
+      toast({ title: "Video must be less than 50MB", variant: "destructive" });
+      return;
+    }
+
+    setVideoFile(file);
+    setImageFile(null);
+    setImagePreview(null);
+    setVideoPreview(URL.createObjectURL(file));
+  };
+
   const removeImage = () => {
     setImageFile(null);
     setImagePreview(null);
+  };
+
+  const removeVideo = () => {
+    if (videoPreview) URL.revokeObjectURL(videoPreview);
+    setVideoFile(null);
+    setVideoPreview(null);
   };
 
   const uploadImage = async (): Promise<string | null> => {
@@ -107,6 +138,31 @@ const CreatePost = () => {
 
     if (error) {
       toast({ title: "Error uploading image", description: error.message, variant: "destructive" });
+      return null;
+    }
+
+    const { data: urlData } = supabase.storage
+      .from("post-images")
+      .getPublicUrl(fileName);
+
+    return urlData.publicUrl;
+  };
+
+  const uploadVideo = async (): Promise<string | null> => {
+    if (!videoFile || !user) return null;
+
+    setUploadingImage(true);
+    const fileExt = videoFile.name.split(".").pop();
+    const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+    const { error } = await supabase.storage
+      .from("post-images")
+      .upload(fileName, videoFile);
+
+    setUploadingImage(false);
+
+    if (error) {
+      toast({ title: "Error uploading video", description: error.message, variant: "destructive" });
       return null;
     }
 
@@ -140,8 +196,15 @@ const CreatePost = () => {
     setLoading(true);
 
     let imageUrl: string | null = null;
-    if (imageFile && (category === "photo" || category === "showcase")) {
-      imageUrl = await uploadImage();
+    let videoUrl: string | null = null;
+    
+    if (category === "photo") {
+      if (imageFile) {
+        imageUrl = await uploadImage();
+      }
+      if (videoFile) {
+        videoUrl = await uploadVideo();
+      }
     }
 
     const { error } = await supabase.from("posts").insert({
@@ -153,6 +216,8 @@ const CreatePost = () => {
       topic: topic || null,
       tags: tags.length > 0 ? tags : null,
       image_url: imageUrl,
+      video_url: videoUrl,
+      media_caption: (imageUrl || videoUrl) && mediaCaption.trim() ? mediaCaption.trim() : null,
     });
 
     if (error) {
@@ -342,13 +407,15 @@ const CreatePost = () => {
                       <p className="text-xs text-muted-foreground mt-1">{content.length}/5000</p>
                     </div>
 
-                    {/* Image Upload for Photo/Showcase category */}
+                    {/* Media Upload for Photo/Video category */}
                     {category === "photo" && (
-                      <div>
-                        <Label className="text-base font-semibold mb-2 block">
-                          Add Photo
+                      <div className="space-y-4">
+                        <Label className="text-base font-semibold block">
+                          Add Photo or Video
                         </Label>
-                        {imagePreview ? (
+                        
+                        {/* Image Preview */}
+                        {imagePreview && (
                           <div className="relative">
                             <img 
                               src={imagePreview} 
@@ -363,24 +430,73 @@ const CreatePost = () => {
                               <X className="w-4 h-4" />
                             </button>
                           </div>
-                        ) : (
-                          <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-colors">
-                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                              <Upload className="w-8 h-8 text-muted-foreground mb-2" />
-                              <p className="text-sm text-muted-foreground">
-                                Click to upload an image
-                              </p>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                PNG, JPG up to 5MB
-                              </p>
-                            </div>
-                            <input 
-                              type="file" 
-                              className="hidden" 
-                              accept="image/*"
-                              onChange={handleImageSelect}
+                        )}
+
+                        {/* Video Preview */}
+                        {videoPreview && (
+                          <div className="relative">
+                            <video 
+                              src={videoPreview} 
+                              controls
+                              className="w-full max-h-64 object-cover rounded-xl"
                             />
-                          </label>
+                            <button
+                              type="button"
+                              onClick={removeVideo}
+                              className="absolute top-2 right-2 p-1.5 bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/90"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Upload Buttons */}
+                        {!imagePreview && !videoPreview && (
+                          <div className="grid grid-cols-2 gap-3">
+                            <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-colors">
+                              <div className="flex flex-col items-center justify-center py-4">
+                                <ImageIcon className="w-6 h-6 text-muted-foreground mb-2" />
+                                <p className="text-sm text-muted-foreground">Upload Photo</p>
+                                <p className="text-xs text-muted-foreground">Up to 5MB</p>
+                              </div>
+                              <input 
+                                type="file" 
+                                className="hidden" 
+                                accept="image/*"
+                                onChange={handleImageSelect}
+                              />
+                            </label>
+                            <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-colors">
+                              <div className="flex flex-col items-center justify-center py-4">
+                                <Video className="w-6 h-6 text-muted-foreground mb-2" />
+                                <p className="text-sm text-muted-foreground">Upload Video</p>
+                                <p className="text-xs text-muted-foreground">Up to 50MB</p>
+                              </div>
+                              <input 
+                                type="file" 
+                                className="hidden" 
+                                accept="video/*"
+                                onChange={handleVideoSelect}
+                              />
+                            </label>
+                          </div>
+                        )}
+
+                        {/* Media Caption */}
+                        {(imagePreview || videoPreview) && (
+                          <div>
+                            <Label htmlFor="mediaCaption" className="text-sm font-medium mb-1 block">
+                              Caption (optional)
+                            </Label>
+                            <Input
+                              id="mediaCaption"
+                              placeholder="Describe your photo or video..."
+                              value={mediaCaption}
+                              onChange={(e) => setMediaCaption(e.target.value)}
+                              maxLength={200}
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">{mediaCaption.length}/200</p>
+                          </div>
                         )}
                       </div>
                     )}

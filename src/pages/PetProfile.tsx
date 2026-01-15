@@ -137,7 +137,7 @@ const PetProfile = () => {
 
     setUploading(true);
     const fileExt = file.name.split('.').pop();
-    const fileName = `${pet.id}/${Date.now()}.${fileExt}`;
+    const fileName = `${user.id}/${pet.id}_${Date.now()}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from("pet-photos")
@@ -151,10 +151,14 @@ const PetProfile = () => {
 
     const { data: publicUrl } = supabase.storage.from("pet-photos").getPublicUrl(fileName);
 
+    // Prompt for caption
+    const caption = window.prompt("Add a caption for this photo (optional):");
+
     const { error: insertError } = await supabase.from("pet_photos").insert({
       pet_id: pet.id,
       user_id: user.id,
-      photo_url: publicUrl.publicUrl
+      photo_url: publicUrl.publicUrl,
+      caption: caption?.trim() || null
     });
 
     if (insertError) {
@@ -433,9 +437,14 @@ const PetProfile = () => {
                       >
                         <img
                           src={photo.photo_url}
-                          alt={`${pet.name} photo`}
+                          alt={photo.caption || `${pet.name} photo`}
                           className="w-full h-full object-cover transition-transform group-hover:scale-105"
                         />
+                        {photo.caption && (
+                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <p className="text-white text-xs line-clamp-2">{photo.caption}</p>
+                          </div>
+                        )}
                         {isOwner && (
                           <button
                             onClick={(e) => {

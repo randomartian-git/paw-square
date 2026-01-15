@@ -36,7 +36,7 @@ const petTypeIcons: Record<string, any> = {
 const PetPhotoGallery = ({ pet, isOpen, onClose, onPhotoUpdated }: PetPhotoGalleryProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [photos, setPhotos] = useState<{ id: string; photo_url: string }[]>([]);
+  const [photos, setPhotos] = useState<{ id: string; photo_url: string; caption?: string | null }[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -53,7 +53,7 @@ const PetPhotoGallery = ({ pet, isOpen, onClose, onPhotoUpdated }: PetPhotoGalle
 
     const { data, error } = await supabase
       .from("pet_photos")
-      .select("id, photo_url")
+      .select("id, photo_url, caption")
       .eq("pet_id", pet.id)
       .order("created_at", { ascending: false });
 
@@ -65,7 +65,7 @@ const PetPhotoGallery = ({ pet, isOpen, onClose, onPhotoUpdated }: PetPhotoGalle
       
       // Add the main photo if it exists and isn't already in the list
       if (pet.photo_url && !photoList.some(p => p.photo_url === pet.photo_url)) {
-        photoList.unshift({ id: "main", photo_url: pet.photo_url });
+        photoList.unshift({ id: "main", photo_url: pet.photo_url, caption: null });
       }
       
       setPhotos(photoList);
@@ -230,6 +230,13 @@ const PetPhotoGallery = ({ pet, isOpen, onClose, onPhotoUpdated }: PetPhotoGalle
                       <ChevronRight className="w-5 h-5" />
                     </Button>
                   </>
+                )}
+
+                {/* Photo Caption */}
+                {photos[selectedIndex].caption && (
+                  <div className="absolute bottom-14 left-2 right-2 px-3 py-2 rounded-lg bg-background/80 backdrop-blur-sm">
+                    <p className="text-sm text-foreground">{photos[selectedIndex].caption}</p>
+                  </div>
                 )}
 
                 {/* Photo Actions */}
