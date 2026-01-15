@@ -4,6 +4,8 @@ import { motion } from "framer-motion";
 import { MessageSquare, Search } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
+import OnlineIndicator from "@/components/OnlineIndicator";
+import { useOnlineUsers } from "@/hooks/usePresence";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
@@ -137,6 +139,12 @@ const Messages = () => {
     setLoading(false);
   };
 
+  // Collect all other user IDs for online tracking
+  const otherUserIds = conversations
+    .map((c) => c.other_user?.user_id)
+    .filter((id): id is string => !!id);
+  const onlineUsers = useOnlineUsers(otherUserIds);
+
   const filteredConversations = conversations.filter((conv) =>
     conv.other_user?.display_name
       ?.toLowerCase()
@@ -204,12 +212,19 @@ const Messages = () => {
                   onClick={() => navigate(`/messages/${conv.id}`)}
                   className="flex items-center gap-4 p-4 bg-card rounded-xl border border-border cursor-pointer hover:border-primary/30 transition-all"
                 >
-                  <Avatar className="w-12 h-12">
-                    <AvatarImage src={conv.other_user?.avatar_url || undefined} />
-                    <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground">
-                      {conv.other_user?.display_name?.[0]?.toUpperCase() || "?"}
-                    </AvatarFallback>
-                  </Avatar>
+                  <div className="relative">
+                    <Avatar className="w-12 h-12">
+                      <AvatarImage src={conv.other_user?.avatar_url || undefined} />
+                      <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground">
+                        {conv.other_user?.display_name?.[0]?.toUpperCase() || "?"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <OnlineIndicator
+                      isOnline={conv.other_user?.user_id ? onlineUsers.has(conv.other_user.user_id) : false}
+                      size="md"
+                      className="absolute -bottom-0.5 -right-0.5"
+                    />
+                  </div>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
