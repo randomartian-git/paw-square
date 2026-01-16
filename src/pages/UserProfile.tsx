@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { MapPin, Calendar, Dog, Cat, Bird, Fish, Rabbit, Sparkles, Heart, MessageSquare, Mail, UserPlus, UserCheck, Users, Shield, UserMinus } from "lucide-react";
+import { MapPin, Calendar, Dog, Cat, Bird, Fish, Rabbit, Sparkles, Heart, MessageSquare, Mail, UserPlus, UserCheck, Users, Shield, UserMinus, Flag } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import FollowersModal from "@/components/FollowersModal";
+import ReportDialog from "@/components/ReportDialog";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { useModeration } from "@/hooks/useModeration";
@@ -474,11 +475,21 @@ const UserProfile = () => {
                             {targetUserIsModerator ? "Remove Role" : "Assign Role"}
                           </AlertDialogAction>
                         </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  )}
-                </div>
-              )}
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                    
+                    {/* Report User Button */}
+                    <ReportDialog
+                      userId={userId}
+                      trigger={
+                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive">
+                          <Flag className="w-4 h-4" />
+                        </Button>
+                      }
+                    />
+                  </div>
+                )}
             </div>
 
             {profile.bio && (

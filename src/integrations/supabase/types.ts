@@ -462,6 +462,7 @@ export type Database = {
           id: string
           post_id: string | null
           reason: string
+          reported_user_id: string | null
           reporter_id: string
           resolved_at: string | null
           resolved_by: string | null
@@ -474,6 +475,7 @@ export type Database = {
           id?: string
           post_id?: string | null
           reason: string
+          reported_user_id?: string | null
           reporter_id: string
           resolved_at?: string | null
           resolved_by?: string | null
@@ -486,6 +488,7 @@ export type Database = {
           id?: string
           post_id?: string | null
           reason?: string
+          reported_user_id?: string | null
           reporter_id?: string
           resolved_at?: string | null
           resolved_by?: string | null
