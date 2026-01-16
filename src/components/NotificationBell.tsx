@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { Bell } from "lucide-react";
+import { Bell, Shield, AlertTriangle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -115,13 +115,15 @@ const NotificationBell = () => {
     setOpen(false);
     if (notif.type === "follow") {
       navigate(`/profile/${notif.from_user_id}`);
+    } else if (notif.type === "moderation") {
+      navigate("/guidelines");
     } else if (notif.post_id) {
       navigate(`/post/${notif.post_id}`);
     }
   };
 
   const getNotificationText = (notif: Notification) => {
-    const name = notif.from_user?.display_name || "Someone";
+    const name = notif.from_user?.display_name || "A moderator";
     switch (notif.type) {
       case "like":
         return `${name} liked your post`;
@@ -129,9 +131,29 @@ const NotificationBell = () => {
         return `${name} started following you`;
       case "comment":
         return `${name} commented on your post`;
+      case "moderation":
+        return "Your content was removed for violating community guidelines";
       default:
         return "New notification";
     }
+  };
+
+  const getNotificationIcon = (notif: Notification) => {
+    if (notif.type === "moderation") {
+      return (
+        <div className="w-9 h-9 rounded-full bg-destructive/20 flex items-center justify-center">
+          <AlertTriangle className="w-4 h-4 text-destructive" />
+        </div>
+      );
+    }
+    return (
+      <Avatar className="w-9 h-9">
+        <AvatarImage src={notif.from_user?.avatar_url || undefined} />
+        <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs">
+          {notif.from_user?.display_name?.[0]?.toUpperCase() || "?"}
+        </AvatarFallback>
+      </Avatar>
+    );
   };
 
   if (!user) return null;
@@ -183,22 +205,28 @@ const NotificationBell = () => {
                   animate={{ opacity: 1 }}
                   className={`flex items-start gap-3 p-3 cursor-pointer hover:bg-muted/50 transition-colors ${
                     !notif.read ? "bg-primary/5" : ""
-                  }`}
+                  } ${notif.type === "moderation" ? "bg-destructive/5" : ""}`}
                   onClick={() => handleNotificationClick(notif)}
                 >
-                  <Avatar className="w-9 h-9">
-                    <AvatarImage src={notif.from_user?.avatar_url || undefined} />
-                    <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs">
-                      {notif.from_user?.display_name?.[0]?.toUpperCase() || "?"}
-                    </AvatarFallback>
-                  </Avatar>
+                  {getNotificationIcon(notif)}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm">{getNotificationText(notif)}</p>
+                    <p className={`text-sm ${notif.type === "moderation" ? "text-destructive" : ""}`}>
+                      {getNotificationText(notif)}
+                    </p>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {formatDistanceToNow(new Date(notif.created_at), {
                         addSuffix: true,
                       })}
                     </p>
+                    {notif.type === "moderation" && (
+                      <Link 
+                        to="/guidelines" 
+                        className="text-xs text-primary hover:underline mt-1 inline-block"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        View Guidelines
+                      </Link>
+                    )}
                   </div>
                   {!notif.read && (
                     <div className="w-2 h-2 rounded-full bg-primary mt-2" />

@@ -21,6 +21,7 @@ import CreatePost from "./pages/CreatePost";
 import EditPost from "./pages/EditPost";
 import Messages from "./pages/Messages";
 import Conversation from "./pages/Conversation";
+import Guidelines from "./pages/Guidelines";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +50,7 @@ const App = () => (
               <Route path="/edit-post/:postId" element={<EditPost />} />
               <Route path="/messages" element={<Messages />} />
               <Route path="/messages/:conversationId" element={<Conversation />} />
+              <Route path="/guidelines" element={<Guidelines />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
