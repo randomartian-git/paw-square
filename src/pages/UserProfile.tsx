@@ -300,7 +300,7 @@ const UserProfile = () => {
                     </div>
                   )}
                   {profile.custom_flair && (
-                    <Badge className="bg-gradient-to-r from-primary to-accent text-primary-foreground text-xs">
+                    <Badge className="bg-gradient-to-r from-primary to-accent text-white text-xs">
                       {profile.custom_flair}
                     </Badge>
                   )}

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, MessageCircle, Share2, Send, Clock, Bookmark, ArrowLeft, Trash2, Pencil, Check, X, Reply, ChevronDown, ChevronUp } from "lucide-react";
+import { MessageCircle, Share2, Send, Clock, Bookmark, ArrowLeft, Trash2, Pencil, Check, X, Reply, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDistanceToNow } from "date-fns";
 import Navbar from "@/components/Navbar";
+import LikeButton from "@/components/LikeButton";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -238,20 +239,49 @@ const PostDetail = () => {
       return;
     }
 
-    const comment = comments.find(c => c.id === commentId);
+    // Check in top-level comments and their replies
+    let comment: Comment | undefined;
+    for (const c of comments) {
+      if (c.id === commentId) {
+        comment = c;
+        break;
+      }
+      const reply = c.replies?.find(r => r.id === commentId);
+      if (reply) {
+        comment = reply;
+        break;
+      }
+    }
     if (!comment) return;
+
+    const newLikesCount = comment.isLiked ? comment.likes_count - 1 : comment.likes_count + 1;
 
     if (comment.isLiked) {
       await supabase.from("likes").delete().eq("user_id", user.id).eq("comment_id", commentId);
     } else {
       await supabase.from("likes").insert({ user_id: user.id, comment_id: commentId });
     }
+    
+    // Update likes_count in database
+    await supabase.from("comments").update({ likes_count: newLikesCount }).eq("id", commentId);
 
-    setComments(prev => prev.map(c => 
-      c.id === commentId 
-        ? { ...c, isLiked: !c.isLiked, likes_count: c.isLiked ? c.likes_count - 1 : c.likes_count + 1 }
-        : c
-    ));
+    // Update local state for both top-level comments and replies
+    setComments(prev => prev.map(c => {
+      if (c.id === commentId) {
+        return { ...c, isLiked: !c.isLiked, likes_count: newLikesCount };
+      }
+      if (c.replies) {
+        return {
+          ...c,
+          replies: c.replies.map(r => 
+            r.id === commentId 
+              ? { ...r, isLiked: !r.isLiked, likes_count: newLikesCount }
+              : r
+          )
+        };
+      }
+      return c;
+    }));
   };
 
   const handleSubmitComment = async (parentId: string | null = null) => {
@@ -515,16 +545,14 @@ const PostDetail = () => {
 
             {/* Post Actions */}
             <div className="p-4 flex items-center gap-4">
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={handleLikePost}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                  isLiked ? "bg-accent/20 text-accent" : "hover:bg-muted text-muted-foreground"
-                }`}
-              >
-                <Heart className={`w-5 h-5 ${isLiked ? "fill-current" : ""}`} />
-                <span>{likesCount}</span>
-              </motion.button>
+              <div className="flex items-center gap-2 px-4 py-2 rounded-lg">
+                <LikeButton
+                  isLiked={isLiked}
+                  likesCount={likesCount}
+                  onLike={handleLikePost}
+                  size="md"
+                />
+              </div>
 
               <button className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors">
                 <MessageCircle className="w-5 h-5" />
@@ -697,16 +725,12 @@ const PostDetail = () => {
                           )}
                           
                           <div className="flex items-center gap-3 mt-2">
-                            <motion.button
-                              whileTap={{ scale: 0.9 }}
-                              onClick={() => handleLikeComment(comment.id)}
-                              className={`flex items-center gap-1 text-sm transition-colors ${
-                                comment.isLiked ? "text-accent" : "text-muted-foreground hover:text-accent"
-                              }`}
-                            >
-                              <Heart className={`w-4 h-4 ${comment.isLiked ? "fill-current" : ""}`} />
-                              {comment.likes_count > 0 && comment.likes_count}
-                            </motion.button>
+                            <LikeButton
+                              isLiked={comment.isLiked || false}
+                              likesCount={comment.likes_count}
+                              onLike={() => handleLikeComment(comment.id)}
+                              size="sm"
+                            />
 
                             {/* Reply button */}
                             <button
@@ -880,16 +904,12 @@ const PostDetail = () => {
                                       )}
                                       
                                       <div className="flex items-center gap-3 mt-1">
-                                        <motion.button
-                                          whileTap={{ scale: 0.9 }}
-                                          onClick={() => handleLikeComment(reply.id)}
-                                          className={`flex items-center gap-1 text-xs transition-colors ${
-                                            reply.isLiked ? "text-accent" : "text-muted-foreground hover:text-accent"
-                                          }`}
-                                        >
-                                          <Heart className={`w-3 h-3 ${reply.isLiked ? "fill-current" : ""}`} />
-                                          {reply.likes_count > 0 && reply.likes_count}
-                                        </motion.button>
+                                        <LikeButton
+                                          isLiked={reply.isLiked || false}
+                                          likesCount={reply.likes_count}
+                                          onLike={() => handleLikeComment(reply.id)}
+                                          size="sm"
+                                        />
 
                                         {user?.id === reply.user_id && editingCommentId !== reply.id && (
                                           <>
