@@ -48,12 +48,18 @@ const features = [
 const Features = () => {
   return (
     <section id="discussions" className="py-20 relative overflow-hidden">
+      {/* Top gradient transition from previous section */}
+      <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-primary/10 via-primary/5 to-transparent pointer-events-none" />
+      
       {/* Static background orbs */}
       <div className="absolute top-0 left-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-accent/10 rounded-full blur-3xl" />
       <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-tertiary/5 rounded-full blur-3xl" />
       <div className="absolute top-1/4 right-1/4 w-48 h-48 bg-quaternary/8 rounded-full blur-3xl" />
       <div className="absolute bottom-1/4 left-1/3 w-56 h-56 bg-primary/5 rounded-full blur-3xl" />
+      
+      {/* Bottom gradient transition to next section */}
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-b from-transparent via-accent/5 to-accent/10 pointer-events-none" />
       
       <div className="container mx-auto px-4 relative z-10">
         <div className="text-center mb-16">
