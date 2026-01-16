@@ -47,6 +47,7 @@ interface Report {
   reporter_id: string;
   post_id: string | null;
   comment_id: string | null;
+  reported_user_id: string | null;
   reason: string;
   description: string | null;
   status: string;
@@ -67,6 +68,11 @@ interface Report {
     id: string;
     content: string;
     user_id: string;
+  };
+  reported_user?: {
+    user_id: string;
+    display_name: string | null;
+    avatar_url: string | null;
   };
 }
 
@@ -145,9 +151,12 @@ const ModerationDashboard = () => {
     const reporterIds = [...new Set(data.map(r => r.reporter_id))];
     const postIds = data.filter(r => r.post_id).map(r => r.post_id!);
     const commentIds = data.filter(r => r.comment_id).map(r => r.comment_id!);
+    const reportedUserIds = data.filter(r => r.reported_user_id).map(r => r.reported_user_id!);
+    
+    const allUserIds = [...new Set([...reporterIds, ...reportedUserIds])];
 
     const [profilesRes, postsRes, commentsRes] = await Promise.all([
-      supabase.from("profiles").select("user_id, display_name, avatar_url").in("user_id", reporterIds),
+      supabase.from("profiles").select("user_id, display_name, avatar_url").in("user_id", allUserIds),
       postIds.length > 0 
         ? supabase.from("posts").select("id, title, content, user_id").in("id", postIds)
         : Promise.resolve({ data: [] }),
@@ -171,6 +180,7 @@ const ModerationDashboard = () => {
       reporter_profile: profilesMap.get(report.reporter_id),
       post: report.post_id ? postsMap.get(report.post_id) : undefined,
       comment: report.comment_id ? commentsMap.get(report.comment_id) : undefined,
+      reported_user: report.reported_user_id ? profilesMap.get(report.reported_user_id) : undefined,
     }));
 
     setReports(enrichedReports);
@@ -493,12 +503,14 @@ const ModerationDashboard = () => {
                                 <div className="flex items-center gap-3">
                                   {report.post_id ? (
                                     <FileText className="w-5 h-5 text-muted-foreground" />
-                                  ) : (
+                                  ) : report.comment_id ? (
                                     <MessageCircle className="w-5 h-5 text-muted-foreground" />
+                                  ) : (
+                                    <User className="w-5 h-5 text-muted-foreground" />
                                   )}
                                   <div>
                                     <CardTitle className="text-base">
-                                      {report.post_id ? "Post Report" : "Comment Report"}
+                                      {report.post_id ? "Post Report" : report.comment_id ? "Comment Report" : "User Report"}
                                     </CardTitle>
                                     <CardDescription className="flex items-center gap-2">
                                       <Clock className="w-3 h-3" />
@@ -544,6 +556,22 @@ const ModerationDashboard = () => {
                                   <p className="text-sm text-muted-foreground line-clamp-3">
                                     {report.comment.content}
                                   </p>
+                                </div>
+                              )}
+                              {report.reported_user && (
+                                <div className="p-3 rounded-lg bg-muted/50 border border-border">
+                                  <div className="flex items-center gap-3">
+                                    <Avatar className="w-10 h-10">
+                                      <AvatarImage src={report.reported_user.avatar_url || undefined} />
+                                      <AvatarFallback>
+                                        {report.reported_user.display_name?.[0] || "?"}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                      <p className="font-medium">{report.reported_user.display_name || "Unknown User"}</p>
+                                      <p className="text-xs text-muted-foreground">User ID: {report.reported_user_id}</p>
+                                    </div>
+                                  </div>
                                 </div>
                               )}
 
@@ -592,13 +620,26 @@ const ModerationDashboard = () => {
                                         </Button>
                                       )}
 
+                                      {report.reported_user_id && (
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          asChild
+                                        >
+                                          <Link to={`/profile/${report.reported_user_id}`}>
+                                            <Eye className="w-4 h-4 mr-2" />
+                                            View Profile
+                                          </Link>
+                                        </Button>
+                                      )}
+
                                       {/* Ban User Button */}
-                                      {(report.post?.user_id || report.comment?.user_id) && (
+                                      {(report.post?.user_id || report.comment?.user_id || report.reported_user_id) && (
                                         <Button
                                           variant="outline"
                                           size="sm"
                                           className="text-destructive border-destructive/30 hover:bg-destructive/10"
-                                          onClick={() => openBanDialog(report.post?.user_id || report.comment?.user_id || "")}
+                                          onClick={() => openBanDialog(report.post?.user_id || report.comment?.user_id || report.reported_user_id || "")}
                                         >
                                           <UserX className="w-4 h-4 mr-2" />
                                           Ban User

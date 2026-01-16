@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 interface ReportDialogProps {
   postId?: string;
   commentId?: string;
+  userId?: string;
   trigger?: React.ReactNode;
 }
 
@@ -32,7 +33,7 @@ const REPORT_REASONS = [
   { value: "other", label: "Other" },
 ];
 
-const ReportDialog = ({ postId, commentId, trigger }: ReportDialogProps) => {
+const ReportDialog = ({ postId, commentId, userId, trigger }: ReportDialogProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [description, setDescription] = useState("");
@@ -64,6 +65,7 @@ const ReportDialog = ({ postId, commentId, trigger }: ReportDialogProps) => {
       reporter_id: user.id,
       post_id: postId || null,
       comment_id: commentId || null,
+      reported_user_id: userId || null,
       reason,
       description: description.trim() || null,
     });
@@ -99,7 +101,7 @@ const ReportDialog = ({ postId, commentId, trigger }: ReportDialogProps) => {
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Report Content</DialogTitle>
+          <DialogTitle>Report {userId ? "User" : "Content"}</DialogTitle>
           <DialogDescription>
             Help us understand the problem. Reports are reviewed by our moderation team.
           </DialogDescription>
