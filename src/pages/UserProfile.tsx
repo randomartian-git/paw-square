@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { MapPin, Calendar, Dog, Cat, Bird, Fish, Rabbit, Sparkles, Heart, MessageSquare, Mail, UserPlus, UserCheck, Users } from "lucide-react";
+import { MapPin, Calendar, Dog, Cat, Bird, Fish, Rabbit, Sparkles, Heart, MessageSquare, Mail, UserPlus, UserCheck, Users, Shield, UserMinus } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,18 @@ import Navbar from "@/components/Navbar";
 import FollowersModal from "@/components/FollowersModal";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
+import { useModeration } from "@/hooks/useModeration";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type Profile = {
   id: string;
@@ -59,6 +71,7 @@ const UserProfile = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isModerator, assignModeratorRole, removeModeratorRole, checkUserRole } = useModeration();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [pets, setPets] = useState<Pet[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -68,6 +81,8 @@ const UserProfile = () => {
   const [followLoading, setFollowLoading] = useState(false);
   const [followersModalOpen, setFollowersModalOpen] = useState(false);
   const [followersModalTab, setFollowersModalTab] = useState<"followers" | "following">("followers");
+  const [targetUserIsModerator, setTargetUserIsModerator] = useState(false);
+  const [roleLoading, setRoleLoading] = useState(false);
 
   useEffect(() => {
     if (userId) fetchData();
@@ -98,7 +113,40 @@ const UserProfile = () => {
       setIsFollowing(!!followData);
     }
 
+    // Check if target user is a moderator
+    const roles = await checkUserRole(userId);
+    setTargetUserIsModerator(roles.includes("moderator") || roles.includes("admin"));
+
     setLoading(false);
+  };
+
+  const handleToggleModeratorRole = async () => {
+    if (!userId || !isModerator) return;
+    setRoleLoading(true);
+
+    try {
+      if (targetUserIsModerator) {
+        const result = await removeModeratorRole(userId);
+        if (result.success) {
+          setTargetUserIsModerator(false);
+          toast.success("Moderator role removed");
+        } else {
+          toast.error(result.error || "Failed to remove role");
+        }
+      } else {
+        const result = await assignModeratorRole(userId);
+        if (result.success) {
+          setTargetUserIsModerator(true);
+          toast.success("Moderator role assigned");
+        } else {
+          toast.error(result.error || "Failed to assign role");
+        }
+      }
+    } catch (error) {
+      toast.error("An error occurred");
+    } finally {
+      setRoleLoading(false);
+    }
   };
 
   const handleFollow = async () => {
@@ -296,6 +344,13 @@ const UserProfile = () => {
               <div className="flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="text-2xl font-display font-bold">{profile.display_name || "Pet Lover"}</h1>
+                  {/* Moderator badge */}
+                  {targetUserIsModerator && (
+                    <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs flex items-center gap-1">
+                      <Shield className="w-3 h-3" />
+                      Moderator
+                    </Badge>
+                  )}
                   {/* Display flairs */}
                   {profile.flair && profile.flair.length > 0 && (
                     <div className="flex items-center gap-1">
@@ -351,7 +406,7 @@ const UserProfile = () => {
               </div>
 
               {user && userId !== user.id && (
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <Button
                     onClick={handleFollow}
                     disabled={followLoading}
@@ -378,6 +433,50 @@ const UserProfile = () => {
                     <Mail className="w-4 h-4 mr-2" />
                     {startingConversation ? "..." : "Message"}
                   </Button>
+                  
+                  {/* Moderator actions */}
+                  {isModerator && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          disabled={roleLoading}
+                          className={targetUserIsModerator ? "border-destructive text-destructive hover:bg-destructive/10" : "border-amber-500 text-amber-600 hover:bg-amber-500/10"}
+                        >
+                          {targetUserIsModerator ? (
+                            <>
+                              <UserMinus className="w-4 h-4 mr-2" />
+                              Remove Mod
+                            </>
+                          ) : (
+                            <>
+                              <Shield className="w-4 h-4 mr-2" />
+                              Make Mod
+                            </>
+                          )}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            {targetUserIsModerator ? "Remove Moderator Role" : "Assign Moderator Role"}
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            {targetUserIsModerator 
+                              ? `Are you sure you want to remove ${profile.display_name || "this user"}'s moderator privileges?`
+                              : `Are you sure you want to make ${profile.display_name || "this user"} a moderator? They will be able to remove posts and comments that violate community guidelines.`
+                            }
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleToggleModeratorRole}>
+                            {targetUserIsModerator ? "Remove Role" : "Assign Role"}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                 </div>
               )}
             </div>

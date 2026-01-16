@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, Share2, Send, Clock, Bookmark, ArrowLeft, Trash2, Pencil, Check, X, Reply, ChevronDown, ChevronUp } from "lucide-react";
+import { MessageCircle, Share2, Send, Clock, Bookmark, ArrowLeft, Trash2, Pencil, Check, X, Reply, ChevronDown, ChevronUp, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { formatDistanceToNow } from "date-fns";
 import Navbar from "@/components/Navbar";
 import LikeButton from "@/components/LikeButton";
+import { useModeration } from "@/hooks/useModeration";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,6 +64,7 @@ const PostDetail = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { isModerator, deletePostAsModerator, deleteCommentAsModerator } = useModeration();
   
   const [post, setPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -342,7 +344,11 @@ const PostDetail = () => {
   };
 
   const handleDeletePost = async () => {
-    if (!user || !post || user.id !== post.user_id) return;
+    if (!user || !post) return;
+    
+    // Check if user is owner or moderator
+    const isOwner = user.id === post.user_id;
+    if (!isOwner && !isModerator) return;
 
     // Delete associated likes, comments, and bookmarks first
     await Promise.all([
@@ -351,29 +357,53 @@ const PostDetail = () => {
       supabase.from("comments").delete().eq("post_id", post.id),
     ]);
 
-    const { error } = await supabase.from("posts").delete().eq("id", post.id);
-    
-    if (error) {
-      toast({ title: "Error deleting post", description: error.message, variant: "destructive" });
+    if (isModerator && !isOwner) {
+      // Moderator deleting someone else's post
+      const result = await deletePostAsModerator(post.id, post.user_id, post.title);
+      if (result.success) {
+        toast({ title: "Post removed", description: "The user has been notified." });
+        navigate("/community");
+      } else {
+        toast({ title: "Error deleting post", description: result.error, variant: "destructive" });
+      }
     } else {
-      toast({ title: "Post deleted" });
-      navigate("/community");
+      // Owner deleting their own post
+      const { error } = await supabase.from("posts").delete().eq("id", post.id);
+      if (error) {
+        toast({ title: "Error deleting post", description: error.message, variant: "destructive" });
+      } else {
+        toast({ title: "Post deleted" });
+        navigate("/community");
+      }
     }
   };
 
-  const handleDeleteComment = async (commentId: string) => {
-    if (!user) return;
+  const handleDeleteComment = async (commentId: string, commentOwnerId?: string) => {
+    if (!user || !post) return;
+    
+    const isOwner = commentOwnerId === user.id;
     
     // Delete associated likes first
     await supabase.from("likes").delete().eq("comment_id", commentId);
     
-    const { error } = await supabase.from("comments").delete().eq("id", commentId);
-    
-    if (error) {
-      toast({ title: "Error deleting comment", description: error.message, variant: "destructive" });
+    if (isModerator && !isOwner && commentOwnerId) {
+      // Moderator deleting someone else's comment
+      const result = await deleteCommentAsModerator(commentId, commentOwnerId, post.id);
+      if (result.success) {
+        toast({ title: "Comment removed", description: "The user has been notified." });
+        fetchComments();
+      } else {
+        toast({ title: "Error deleting comment", description: result.error, variant: "destructive" });
+      }
     } else {
-      toast({ title: "Comment deleted" });
-      setComments(prev => prev.filter(c => c.id !== commentId));
+      // Owner deleting their own comment
+      const { error } = await supabase.from("comments").delete().eq("id", commentId);
+      if (error) {
+        toast({ title: "Error deleting comment", description: error.message, variant: "destructive" });
+      } else {
+        toast({ title: "Comment deleted" });
+        setComments(prev => prev.filter(c => c.id !== commentId));
+      }
     }
   };
 
@@ -587,6 +617,7 @@ const PostDetail = () => {
                 <Bookmark className={`w-5 h-5 ${isBookmarked ? "fill-current" : ""}`} />
               </motion.button>
 
+              {/* Owner actions */}
               {user?.id === post.user_id && (
                 <>
                   <button 
@@ -617,6 +648,33 @@ const PostDetail = () => {
                     </AlertDialogContent>
                   </AlertDialog>
                 </>
+              )}
+
+              {/* Moderator actions - only show if not owner */}
+              {isModerator && user?.id !== post.user_id && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <button className="px-4 py-2 rounded-lg hover:bg-destructive/10 text-destructive transition-colors flex items-center gap-1">
+                      <Shield className="w-4 h-4" />
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Remove Post (Moderator)</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This post violates <Link to="/guidelines" className="text-primary underline">community guidelines</Link>. 
+                        The author will be notified that their content was removed.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDeletePost} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                        Remove Post
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               )}
             </div>
           </motion.article>

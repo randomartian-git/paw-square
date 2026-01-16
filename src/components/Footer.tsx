@@ -7,10 +7,10 @@ const Footer = () => {
     Community: [
       { label: "Feed", href: "/community" },
       { label: "Create Post", href: "/create-post" },
-      { label: "AI Assistant", href: "/ai-assistant" },
+      { label: "Guidelines", href: "/guidelines" },
     ],
     Resources: [
-      { label: "Pet Care Tips", href: "/ai-assistant" },
+      { label: "AI Assistant", href: "/ai-assistant" },
       { label: "About", href: "/about" },
     ],
     Account: [
