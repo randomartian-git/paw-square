@@ -360,6 +360,7 @@ export type Database = {
           likes_count: number
           media_caption: string | null
           pet_type: string | null
+          reposts_count: number
           tags: string[] | null
           title: string
           topic: string | null
@@ -377,6 +378,7 @@ export type Database = {
           likes_count?: number
           media_caption?: string | null
           pet_type?: string | null
+          reposts_count?: number
           tags?: string[] | null
           title: string
           topic?: string | null
@@ -394,6 +396,7 @@ export type Database = {
           likes_count?: number
           media_caption?: string | null
           pet_type?: string | null
+          reposts_count?: number
           tags?: string[] | null
           title?: string
           topic?: string | null
@@ -450,6 +453,45 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      reposts: {
+        Row: {
+          comment_id: string | null
+          created_at: string
+          id: string
+          post_id: string | null
+          user_id: string
+        }
+        Insert: {
+          comment_id?: string | null
+          created_at?: string
+          id?: string
+          post_id?: string | null
+          user_id: string
+        }
+        Update: {
+          comment_id?: string | null
+          created_at?: string
+          id?: string
+          post_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reposts_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reposts_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
