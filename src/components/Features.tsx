@@ -26,8 +26,8 @@ const features = [
     icon: MapPin,
     title: "Pet Services",
     description: "Find trusted groomers, vets, pet sitters, and more with community-verified reviews.",
-    gradient: "from-quaternary to-tertiary",
-    bgGlow: "bg-quaternary/5",
+    gradient: "from-tertiary to-primary",
+    bgGlow: "bg-tertiary/5",
   },
   {
     icon: Heart,

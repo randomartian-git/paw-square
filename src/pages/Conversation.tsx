@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Send, Check, CheckCheck } from "lucide-react";
+import { ArrowLeft, Send, Check, CheckCheck, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -269,20 +269,46 @@ const Conversation = () => {
               const isOwn = message.sender_id === user?.id;
               const isLastOwnMessage = isOwn && 
                 messages.slice(index + 1).every(m => m.sender_id !== user?.id);
+              
+              const handleDeleteMessage = async (e: React.MouseEvent) => {
+                e.stopPropagation();
+                const { error } = await supabase
+                  .from("messages")
+                  .delete()
+                  .eq("id", message.id);
+                
+                if (error) {
+                  toast.error("Failed to delete message");
+                } else {
+                  setMessages(prev => prev.filter(m => m.id !== message.id));
+                  toast.success("Message deleted");
+                }
+              };
+
               return (
                 <motion.div
                   key={message.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className={`flex ${isOwn ? "justify-end" : "justify-start"}`}
+                  className={`flex ${isOwn ? "justify-end" : "justify-start"} group`}
                 >
                   <div
-                    className={`max-w-[75%] p-3 rounded-2xl ${
+                    className={`max-w-[75%] p-3 rounded-2xl relative ${
                       isOwn
                         ? "bg-primary text-primary-foreground rounded-br-md"
                         : "bg-muted rounded-bl-md"
                     }`}
                   >
+                    {/* Delete button for own messages */}
+                    {isOwn && (
+                      <button
+                        onClick={handleDeleteMessage}
+                        className="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-full hover:bg-destructive/20 text-muted-foreground hover:text-destructive"
+                        title="Delete message"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                     <p className="whitespace-pre-wrap break-words">{message.content}</p>
                     <div className={`flex items-center gap-1 mt-1 ${isOwn ? "justify-end" : ""}`}>
                       <span
