@@ -141,6 +141,13 @@ const UserProfile = () => {
           prev ? { ...prev, followers_count: prev.followers_count + 1 } : prev
         );
         toast.success("Following!");
+        
+        // Send notification to followed user
+        await supabase.from("notifications").insert({
+          user_id: userId,
+          type: "follow",
+          from_user_id: user.id,
+        });
       }
     } catch (error) {
       console.error("[Follow]", error);

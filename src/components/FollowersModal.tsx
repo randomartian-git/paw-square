@@ -128,6 +128,13 @@ const FollowersModal = ({ open, onOpenChange, userId, initialTab = "followers" }
         });
 
         setFollowingStatus((prev) => ({ ...prev, [targetUserId]: true }));
+        
+        // Send notification to followed user
+        await supabase.from("notifications").insert({
+          user_id: targetUserId,
+          type: "follow",
+          from_user_id: user.id,
+        });
       }
     } catch (error) {
       console.error("[ToggleFollow]", error);
