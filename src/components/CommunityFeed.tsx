@@ -51,7 +51,7 @@ const PostCard = ({ post, index }: { post: Post; index: number }) => {
     <motion.div
       ref={cardRef}
       initial={{ opacity: 0, y: 30 }}
-      animate={isInView ? { opacity: 1, y: 0 } : {}}
+      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.1, ease: "easeOut" }}
       whileHover={{ y: -4 }}
       className="bg-card/80 backdrop-blur-sm rounded-2xl shadow-soft border border-border overflow-hidden hover:shadow-elevated transition-all duration-300 cursor-pointer"
@@ -254,7 +254,7 @@ const CommunityFeed = () => {
       <div className="container mx-auto px-4 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
           className="text-center mb-12"
         >
@@ -275,7 +275,7 @@ const CommunityFeed = () => {
 
         {/* See More */}
         <motion.div
-          initial={{ opacity: 0 }}
+          initial={{ opacity: 1 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
           className="text-center mt-10"
