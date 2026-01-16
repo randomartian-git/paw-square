@@ -93,27 +93,6 @@ const Hero = () => {
             </Button>
           </div>
 
-          {/* Stats */}
-          <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-12 mt-12">
-            {[
-              { icon: Users, value: "12K+", label: "Pet Parents", color: "bg-primary/20", iconColor: "text-primary", glow: "shadow-glow" },
-              { icon: Heart, value: "45K+", label: "Happy Moments", color: "bg-accent/20", iconColor: "text-accent", glow: "shadow-glow-accent" },
-              { icon: PawPrint, value: "8K+", label: "Pet Profiles", color: "bg-tertiary/20", iconColor: "text-tertiary", glow: "shadow-glow-tertiary" },
-            ].map((stat, index) => (
-              <div 
-                key={index} 
-                className="flex items-center gap-3"
-              >
-                <div className={`w-12 h-12 rounded-xl ${stat.color} flex items-center justify-center ${stat.glow}`}>
-                  <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
-                </div>
-                <div className="text-left">
-                  <div className="text-2xl font-bold text-foreground">{stat.value}</div>
-                  <div className="text-sm text-muted-foreground">{stat.label}</div>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
 
