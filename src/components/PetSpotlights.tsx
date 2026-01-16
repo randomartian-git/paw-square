@@ -165,9 +165,16 @@ const PetSpotlights = () => {
       <section id="spotlights" className="py-20 relative overflow-hidden">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <div className="h-8 w-32 bg-muted rounded-full mx-auto mb-4 animate-pulse" />
-            <div className="h-10 w-64 bg-muted rounded mx-auto mb-4 animate-pulse" />
-            <div className="h-6 w-80 bg-muted rounded mx-auto animate-pulse" />
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-quaternary/20 to-accent/20 text-foreground text-sm font-medium mb-4 border border-quaternary/30">
+              <Star className="w-4 h-4 text-quaternary" />
+              Pet Spotlights
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-display font-bold text-foreground mb-4">
+              Meet Our <span className="text-gradient-warm">Furry Stars</span>
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Discover adorable pets from our community. Give them some love! ❤️
+            </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[1, 2, 3, 4].map(i => (

@@ -195,8 +195,12 @@ const CommunityFeed = () => {
       <section id="community" className="py-20 relative overflow-hidden">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <div className="h-10 w-48 bg-muted rounded mx-auto mb-4 animate-pulse" />
-            <div className="h-6 w-80 bg-muted rounded mx-auto animate-pulse" />
+            <h2 className="text-3xl sm:text-4xl font-display font-bold text-foreground mb-4">
+              Community <span className="text-gradient">Feed</span>
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              See what pet parents are sharing, get inspired, and join the conversation
+            </p>
           </div>
           <div className="max-w-2xl mx-auto space-y-6">
             {[1, 2, 3].map(i => (
