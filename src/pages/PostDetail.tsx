@@ -212,6 +212,16 @@ const PostDetail = () => {
       await supabase.from("likes").insert({ user_id: user.id, post_id: post.id });
       await supabase.from("posts").update({ likes_count: newLikesCount }).eq("id", post.id);
       setLikesCount(newLikesCount);
+      
+      // Send notification to post owner (don't notify yourself)
+      if (post.user_id !== user.id) {
+        await supabase.from("notifications").insert({
+          user_id: post.user_id,
+          type: "like",
+          from_user_id: user.id,
+          post_id: post.id,
+        });
+      }
     }
     setIsLiked(!isLiked);
   };

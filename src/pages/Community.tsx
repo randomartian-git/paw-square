@@ -204,6 +204,16 @@ const Community = () => {
       await supabase.from("posts").update({ likes_count: newLikesCount }).eq("id", postId);
       setLikedPosts(prev => new Set([...prev, postId]));
       setPosts(prev => prev.map(p => p.id === postId ? { ...p, likes_count: newLikesCount } : p));
+      
+      // Send notification to post owner (don't notify yourself)
+      if (currentPost.user_id !== user.id) {
+        await supabase.from("notifications").insert({
+          user_id: currentPost.user_id,
+          type: "like",
+          from_user_id: user.id,
+          post_id: postId,
+        });
+      }
     }
   };
 

@@ -4,8 +4,11 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { useAuth } from "@/contexts/AuthContext";
 
 const About = () => {
+  const { user } = useAuth();
+  
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -194,23 +197,34 @@ const About = () => {
             className="bg-card rounded-2xl border border-border p-12"
           >
             <h2 className="text-3xl font-display font-bold mb-4">
-              Ready to Join the Community?
+              {user ? "Explore the Community" : "Ready to Join the Community?"}
             </h2>
             <p className="text-muted-foreground text-lg mb-8 max-w-xl mx-auto">
-              Connect with thousands of pet parents who share your passion for giving pets the best life.
+              {user 
+                ? "Connect with fellow pet parents, share stories, and discover helpful tips."
+                : "Connect with thousands of pet parents who share your passion for giving pets the best life."}
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Button asChild className="bg-gradient-hero shadow-glow hover:shadow-elevated">
-                <Link to="/auth">
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Join PawSquare
-                </Link>
-              </Button>
-              <Button asChild variant="outline">
+              {!user && (
+                <Button asChild className="bg-gradient-hero shadow-glow hover:shadow-elevated">
+                  <Link to="/auth">
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Join PawSquare
+                  </Link>
+                </Button>
+              )}
+              <Button asChild variant={user ? "default" : "outline"} className={user ? "bg-gradient-hero shadow-glow hover:shadow-elevated" : ""}>
                 <Link to="/community">
                   Explore Community
                 </Link>
               </Button>
+              {user && (
+                <Button asChild variant="outline">
+                  <Link to="/profile">
+                    View Your Profile
+                  </Link>
+                </Button>
+              )}
             </div>
           </motion.div>
         </section>

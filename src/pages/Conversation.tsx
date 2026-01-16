@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, Send, Check, CheckCheck } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,15 +10,16 @@ import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import TypingIndicator from "@/components/TypingIndicator";
 import OnlineIndicator from "@/components/OnlineIndicator";
+import EmojiPicker from "@/components/EmojiPicker";
 import { usePresence } from "@/hooks/usePresence";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
-
 type Message = {
   id: string;
   content: string;
   sender_id: string;
   created_at: string;
+  read_at: string | null;
 };
 
 type OtherUser = {
@@ -61,9 +62,32 @@ const Conversation = () => {
             table: 'messages',
             filter: `conversation_id=eq.${conversationId}`
           },
-          (payload) => {
+          async (payload) => {
             const newMsg = payload.new as Message;
             setMessages((prev) => [...prev, newMsg]);
+            
+            // Mark message as read if it's from the other user
+            if (newMsg.sender_id !== user.id && !newMsg.read_at) {
+              await supabase
+                .from("messages")
+                .update({ read_at: new Date().toISOString() })
+                .eq("id", newMsg.id);
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'messages',
+            filter: `conversation_id=eq.${conversationId}`
+          },
+          (payload) => {
+            const updatedMsg = payload.new as Message;
+            setMessages((prev) =>
+              prev.map((m) => (m.id === updatedMsg.id ? updatedMsg : m))
+            );
           }
         )
         .subscribe();
@@ -73,6 +97,22 @@ const Conversation = () => {
       };
     }
   }, [user, conversationId]);
+
+  // Mark unread messages as read when viewing conversation
+  useEffect(() => {
+    if (user && conversationId && messages.length > 0) {
+      const unreadMessages = messages.filter(
+        (m) => m.sender_id !== user.id && !m.read_at
+      );
+      if (unreadMessages.length > 0) {
+        supabase
+          .from("messages")
+          .update({ read_at: new Date().toISOString() })
+          .in("id", unreadMessages.map((m) => m.id))
+          .then();
+      }
+    }
+  }, [user, conversationId, messages]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -225,8 +265,10 @@ const Conversation = () => {
               No messages yet. Say hello!
             </div>
           ) : (
-            messages.map((message) => {
+            messages.map((message, index) => {
               const isOwn = message.sender_id === user?.id;
+              const isLastOwnMessage = isOwn && 
+                messages.slice(index + 1).every(m => m.sender_id !== user?.id);
               return (
                 <motion.div
                   key={message.id}
@@ -242,15 +284,24 @@ const Conversation = () => {
                     }`}
                   >
                     <p className="whitespace-pre-wrap break-words">{message.content}</p>
-                    <p
-                      className={`text-xs mt-1 ${
-                        isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
-                      }`}
-                    >
-                      {formatDistanceToNow(new Date(message.created_at), {
-                        addSuffix: true,
-                      })}
-                    </p>
+                    <div className={`flex items-center gap-1 mt-1 ${isOwn ? "justify-end" : ""}`}>
+                      <span
+                        className={`text-xs ${
+                          isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
+                        }`}
+                      >
+                        {formatDistanceToNow(new Date(message.created_at), {
+                          addSuffix: true,
+                        })}
+                      </span>
+                      {isOwn && isLastOwnMessage && (
+                        message.read_at ? (
+                          <CheckCheck className="w-3.5 h-3.5 text-primary-foreground/70" />
+                        ) : (
+                          <Check className="w-3.5 h-3.5 text-primary-foreground/70" />
+                        )
+                      )}
+                    </div>
                   </div>
                 </motion.div>
               );
@@ -264,8 +315,11 @@ const Conversation = () => {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex gap-2 p-4 bg-card rounded-xl border border-border"
+          className="flex items-end gap-2 p-4 bg-card rounded-xl border border-border"
         >
+          <EmojiPicker
+            onEmojiSelect={(emoji) => setNewMessage((prev) => prev + emoji)}
+          />
           <Textarea
             placeholder="Type a message..."
             value={newMessage}
