@@ -4,7 +4,7 @@ import {
   MessageCircle, Bookmark, Share2, 
   TrendingUp, Clock, Dog, Cat, Bird, Fish, Rabbit,
   Plus, Search, Sparkles, ChevronUp, HelpCircle,
-  MessageSquare, Lightbulb, Image
+  MessageSquare, Lightbulb, Image, BookOpen
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -351,6 +351,16 @@ const Community = () => {
                 >
                   <Plus className="w-5 h-5 mr-2" />
                   Create Post
+                </Button>
+
+                {/* Community Guidelines Button */}
+                <Button
+                  variant="outline"
+                  onClick={() => navigate("/guidelines")}
+                  className="w-full justify-start gap-2"
+                >
+                  <BookOpen className="w-4 h-4" />
+                  Community Guidelines
                 </Button>
 
                 {/* Categories */}

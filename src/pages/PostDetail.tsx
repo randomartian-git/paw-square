@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, Share2, Send, Clock, Bookmark, ArrowLeft, Trash2, Pencil, Check, X, Reply, ChevronDown, ChevronUp, Shield } from "lucide-react";
+import { MessageCircle, Share2, Send, Clock, Bookmark, ArrowLeft, Trash2, Pencil, Check, X, Reply, ChevronDown, ChevronUp, Shield, Flag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import ReportDialog from "@/components/ReportDialog";
 
 interface Comment {
   id: string;
@@ -617,6 +618,18 @@ const PostDetail = () => {
                 <Bookmark className={`w-5 h-5 ${isBookmarked ? "fill-current" : ""}`} />
               </motion.button>
 
+              {/* Report button - only show if not owner */}
+              {user && user.id !== post.user_id && (
+                <ReportDialog 
+                  postId={post.id} 
+                  trigger={
+                    <button className="px-4 py-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors">
+                      <Flag className="w-5 h-5" />
+                    </button>
+                  }
+                />
+              )}
+
               {/* Owner actions */}
               {user?.id === post.user_id && (
                 <>
@@ -816,6 +829,11 @@ const PostDetail = () => {
                               <Reply className="w-4 h-4" />
                               Reply
                             </button>
+
+                            {/* Report comment button - only show if not owner */}
+                            {user && user.id !== comment.user_id && (
+                              <ReportDialog commentId={comment.id} />
+                            )}
 
                             {user?.id === comment.user_id && editingCommentId !== comment.id && (
                               <>

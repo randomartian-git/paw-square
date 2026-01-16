@@ -1,17 +1,19 @@
 import { motion } from "framer-motion";
-import { PawPrint, Users, Menu, X, Sparkles, Info, LogOut, Settings, Bot, MessageSquare } from "lucide-react";
-import { useState } from "react";
+import { PawPrint, Users, Menu, X, Sparkles, Info, LogOut, Settings, Bot, MessageSquare, Shield } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import NotificationBell from "@/components/NotificationBell";
+import { useModeration } from "@/hooks/useModeration";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
+  const { isModerator } = useModeration();
 
   const navLinks = [
     { name: "Community", icon: Users, href: "/community" },
@@ -110,6 +112,12 @@ const Navbar = () => {
                   <Settings className="w-4 h-4 mr-2" />
                   Settings
                 </Button>
+                {isModerator && (
+                  <Button variant="ghost" onClick={() => navigate("/moderation")} className="font-semibold text-primary">
+                    <Shield className="w-4 h-4 mr-2" />
+                    Moderation
+                  </Button>
+                )}
                 <Button variant="ghost" onClick={() => { signOut(); navigate("/"); }} className="font-semibold hover:text-destructive">
                   <LogOut className="w-4 h-4 mr-2" />
                   Sign Out
@@ -190,6 +198,12 @@ const Navbar = () => {
                   <Settings className="w-4 h-4 mr-2" />
                   Settings
                 </Button>
+                {isModerator && (
+                  <Button variant="ghost" onClick={() => { navigate("/moderation"); setIsOpen(false); }} className="w-full justify-center text-primary">
+                    <Shield className="w-4 h-4 mr-2" />
+                    Moderation
+                  </Button>
+                )}
                 {!user && (
                   <>
                     <Button variant="ghost" onClick={() => { navigate("/auth"); setIsOpen(false); }} className="w-full justify-center">
