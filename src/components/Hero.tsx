@@ -1,36 +1,37 @@
-import { PawPrint, Users, Heart, Sparkles, Star, Circle } from "lucide-react";
+import { PawPrint, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { motion, useScroll, useTransform } from "framer-motion";
+import { useRef } from "react";
 
 const Hero = () => {
   const navigate = useNavigate();
+  const sectionRef = useRef(null);
+  
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start start", "end start"]
+  });
 
-  const floatingElements = [
-    { top: "10%", left: "5%", size: 24, icon: PawPrint, color: "text-primary/40" },
-    { top: "15%", right: "8%", size: 32, icon: Heart, color: "text-accent/40" },
-    { top: "55%", left: "6%", size: 20, icon: Star, color: "text-quaternary/50" },
-    { top: "65%", right: "7%", size: 28, icon: PawPrint, color: "text-tertiary/40" },
-    { top: "35%", right: "12%", size: 18, icon: Heart, color: "text-primary/30" },
-    { top: "25%", left: "12%", size: 22, icon: Star, color: "text-accent/35" },
-    { top: "80%", left: "15%", size: 16, icon: Circle, color: "text-tertiary/25" },
-    { top: "45%", left: "3%", size: 14, icon: Circle, color: "text-quaternary/30" },
-    { top: "70%", right: "15%", size: 20, icon: Star, color: "text-primary/35" },
-    { top: "85%", right: "25%", size: 18, icon: PawPrint, color: "text-accent/30" },
-  ];
+  const y1 = useTransform(scrollYProgress, [0, 1], [0, 150]);
+  const y2 = useTransform(scrollYProgress, [0, 1], [0, 100]);
+  const y3 = useTransform(scrollYProgress, [0, 1], [0, 200]);
+  const y4 = useTransform(scrollYProgress, [0, 1], [0, 80]);
+  const opacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
 
   const orbs = [
-    { top: "10%", left: "20%", size: "400px", color: "bg-primary/10", blur: "blur-3xl" },
-    { top: "40%", right: "10%", size: "350px", color: "bg-accent/10", blur: "blur-3xl" },
-    { bottom: "20%", left: "30%", size: "300px", color: "bg-tertiary/8", blur: "blur-3xl" },
-    { top: "60%", right: "30%", size: "250px", color: "bg-quaternary/8", blur: "blur-2xl" },
-    { top: "75%", left: "10%", size: "200px", color: "bg-primary/5", blur: "blur-3xl" },
+    { top: "10%", left: "20%", size: "400px", color: "bg-primary/10", blur: "blur-3xl", y: y1 },
+    { top: "40%", right: "10%", size: "350px", color: "bg-accent/10", blur: "blur-3xl", y: y2 },
+    { bottom: "20%", left: "30%", size: "300px", color: "bg-tertiary/8", blur: "blur-3xl", y: y3 },
+    { top: "60%", right: "30%", size: "250px", color: "bg-quaternary/8", blur: "blur-2xl", y: y4 },
+    { top: "75%", left: "10%", size: "200px", color: "bg-primary/5", blur: "blur-3xl", y: y2 },
   ];
 
   return (
-    <section className="relative min-h-[85vh] md:min-h-[80vh] flex items-center justify-center overflow-hidden pt-16">
-      {/* Static background orbs */}
+    <section ref={sectionRef} className="relative min-h-[85vh] md:min-h-[80vh] flex items-center justify-center overflow-hidden pt-16">
+      {/* Parallax background orbs */}
       {orbs.map((orb, index) => (
-        <div
+        <motion.div
           key={index}
           className={`absolute rounded-full ${orb.color} ${orb.blur}`}
           style={{
@@ -40,26 +41,12 @@ const Hero = () => {
             bottom: orb.bottom,
             width: orb.size,
             height: orb.size,
+            y: orb.y,
           }}
         />
       ))}
-      
-      {/* Static decorative elements */}
-      {floatingElements.map((item, index) => (
-        <div
-          key={index}
-          className={`absolute ${item.color}`}
-          style={{ 
-            top: item.top, 
-            left: item.left, 
-            right: item.right,
-          }}
-        >
-          <item.icon size={item.size} />
-        </div>
-      ))}
 
-      <div className="container mx-auto px-4 relative z-10">
+      <motion.div style={{ opacity }} className="container mx-auto px-4 relative z-10">
         <div className="max-w-4xl mx-auto text-center">
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-primary/20 to-accent/20 text-foreground text-sm font-medium mb-6 border border-primary/30 backdrop-blur-sm">
@@ -92,9 +79,8 @@ const Hero = () => {
               Explore Posts
             </Button>
           </div>
-
         </div>
-      </div>
+      </motion.div>
       
       {/* Bottom gradient transition to next section */}
       <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-b from-transparent via-primary/5 to-primary/10 pointer-events-none" />
