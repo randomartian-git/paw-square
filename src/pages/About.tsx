@@ -45,8 +45,8 @@ const About = () => {
               },
               {
                 icon: Users,
-                title: "Local Connections",
-                description: "Connect with pet owners in your neighborhood for walks, playdates, and emergencies.",
+                title: "Connect with Pet Parents",
+                description: "Find and connect with other pet parents for walks, playdates, and support.",
                 color: "text-tertiary",
               },
               {

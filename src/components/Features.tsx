@@ -17,8 +17,8 @@ const features = [
   },
   {
     icon: Calendar,
-    title: "Local Events",
-    description: "Discover pet-friendly events, meetups, and activities happening in your neighborhood.",
+    title: "Pet Events & Meetups",
+    description: "Discover pet-friendly events, meetups, and activities happening around you.",
     gradient: "from-accent to-quaternary",
     bgGlow: "bg-accent/5",
   },
@@ -32,7 +32,7 @@ const features = [
   {
     icon: Heart,
     title: "Adoption Corner",
-    description: "Help pets find forever homes. Share adoption stories and connect with local shelters.",
+    description: "Help pets find forever homes. Share adoption stories and connect with shelters.",
     gradient: "from-accent to-primary",
     bgGlow: "bg-accent/5",
   },

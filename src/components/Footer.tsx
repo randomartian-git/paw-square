@@ -6,7 +6,7 @@ const Footer = () => {
   const links: Record<string, { label: string; href: string }[]> = {
     Community: [
       { label: "Feed", href: "/community" },
-      { label: "Discussions", href: "/community" },
+      { label: "Create Post", href: "/create-post" },
       { label: "AI Assistant", href: "/ai-assistant" },
     ],
     Resources: [
@@ -86,6 +86,18 @@ const Footer = () => {
               className="text-sm text-muted-foreground hover:text-primary transition-colors"
             >
               Community
+            </Link>
+            <Link
+              to="/settings"
+              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
+              Settings
+            </Link>
+            <Link
+              to="/ai-assistant"
+              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
+              AI Assistant
             </Link>
           </div>
         </div>

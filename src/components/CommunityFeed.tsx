@@ -324,12 +324,12 @@ const CommunityFeed = () => {
             </Button>
           ) : (
             <Button 
-              onClick={() => navigate("/forum")}
+              onClick={() => navigate("/community")}
               variant="outline" 
               size="lg" 
               className="font-semibold border-2 hover:border-primary hover:text-primary hover:shadow-glow transition-all"
             >
-              View All Posts in Forum
+              See More Posts in Community
             </Button>
           )}
         </motion.div>
