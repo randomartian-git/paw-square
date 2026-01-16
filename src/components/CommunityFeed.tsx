@@ -237,6 +237,9 @@ const CommunityFeed = () => {
 
   return (
     <section id="community" className="py-20 relative overflow-hidden" ref={containerRef}>
+      {/* Top gradient transition from previous section */}
+      <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-accent/10 via-accent/5 to-transparent pointer-events-none z-0" />
+      
       {/* Animated background decorations */}
       <motion.div 
         className="absolute top-1/4 right-0 w-72 h-72 bg-accent/10 rounded-full blur-3xl"
@@ -250,6 +253,9 @@ const CommunityFeed = () => {
         className="absolute top-1/2 left-1/3 w-48 h-48 bg-primary/5 rounded-full blur-3xl"
         style={{ y: y1 }}
       />
+      
+      {/* Bottom gradient transition to next section */}
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-b from-transparent via-tertiary/5 to-tertiary/10 pointer-events-none z-0" />
       
       <div className="container mx-auto px-4 relative z-10">
         <motion.div
