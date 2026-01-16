@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Settings as SettingsIcon, Sun, Moon, Eye, Check, ArrowLeft, Lock, Mail, Trash2, AlertTriangle } from "lucide-react";
+import { Settings as SettingsIcon, Sun, Moon, Eye, Check, ArrowLeft, Lock, Mail, Trash2, AlertTriangle, Palette, Paintbrush } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTheme, ThemeMode } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -44,10 +45,17 @@ const themeOptions: { id: ThemeMode; name: string; description: string; icon: ty
     icon: Eye,
     colors: ["bg-blue-500", "bg-sky-400", "bg-cyan-400"],
   },
+  {
+    id: "custom",
+    name: "Custom Theme",
+    description: "Create your own theme by choosing your preferred colors and light or dark mode.",
+    icon: Palette,
+    colors: [],
+  },
 ];
 
 const Settings = () => {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, customColors, setCustomColors } = useTheme();
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -222,14 +230,33 @@ const Settings = () => {
                           {option.description}
                         </p>
                         
-                        <div className="flex gap-2 mt-3">
-                          {option.colors.map((color, i) => (
+                        {option.id !== "custom" && (
+                          <div className="flex gap-2 mt-3">
+                            {option.colors.map((color, i) => (
+                              <div
+                                key={i}
+                                className={`w-6 h-6 rounded-full ${color} ring-2 ring-background`}
+                              />
+                            ))}
+                          </div>
+                        )}
+
+                        {option.id === "custom" && (
+                          <div className="flex gap-2 mt-3">
                             <div
-                              key={i}
-                              className={`w-6 h-6 rounded-full ${color} ring-2 ring-background`}
+                              className="w-6 h-6 rounded-full ring-2 ring-background"
+                              style={{ backgroundColor: customColors.primary }}
                             />
-                          ))}
-                        </div>
+                            <div
+                              className="w-6 h-6 rounded-full ring-2 ring-background"
+                              style={{ backgroundColor: customColors.accent }}
+                            />
+                            <div
+                              className="w-6 h-6 rounded-full ring-2 ring-background"
+                              style={{ backgroundColor: customColors.tertiary }}
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
                     
@@ -249,6 +276,184 @@ const Settings = () => {
               })}
             </div>
           </section>
+
+          {/* Custom Theme Settings */}
+          {theme === "custom" && (
+            <motion.section
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="mb-10"
+            >
+              <h2 className="text-lg font-display font-semibold mb-4 flex items-center gap-2">
+                <Paintbrush className="w-5 h-5 text-primary" />
+                Customize Your Theme
+              </h2>
+
+              <div className="p-6 rounded-2xl bg-card border border-border space-y-6">
+                {/* Dark/Light Mode Toggle */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+                      {customColors.isDark ? (
+                        <Moon className="w-5 h-5 text-muted-foreground" />
+                      ) : (
+                        <Sun className="w-5 h-5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">Dark Mode</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {customColors.isDark ? "Dark background with your custom colors" : "Light background with your custom colors"}
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={customColors.isDark}
+                    onCheckedChange={(checked) =>
+                      setCustomColors({ ...customColors, isDark: checked })
+                    }
+                  />
+                </div>
+
+                {/* Color Pickers */}
+                <div className="grid gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1">
+                      <Label htmlFor="primary-color" className="text-sm font-medium mb-2 block">
+                        Primary Color
+                      </Label>
+                      <p className="text-xs text-muted-foreground mb-2">Main buttons, links, and accents</p>
+                      <div className="flex items-center gap-3">
+                        <input
+                          id="primary-color"
+                          type="color"
+                          value={customColors.primary}
+                          onChange={(e) =>
+                            setCustomColors({ ...customColors, primary: e.target.value })
+                          }
+                          className="w-12 h-12 rounded-xl cursor-pointer border-2 border-border"
+                        />
+                        <Input
+                          value={customColors.primary}
+                          onChange={(e) =>
+                            setCustomColors({ ...customColors, primary: e.target.value })
+                          }
+                          placeholder="#9333ea"
+                          className="w-32 font-mono text-sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1">
+                      <Label htmlFor="accent-color" className="text-sm font-medium mb-2 block">
+                        Accent Color
+                      </Label>
+                      <p className="text-xs text-muted-foreground mb-2">Secondary highlights and gradients</p>
+                      <div className="flex items-center gap-3">
+                        <input
+                          id="accent-color"
+                          type="color"
+                          value={customColors.accent}
+                          onChange={(e) =>
+                            setCustomColors({ ...customColors, accent: e.target.value })
+                          }
+                          className="w-12 h-12 rounded-xl cursor-pointer border-2 border-border"
+                        />
+                        <Input
+                          value={customColors.accent}
+                          onChange={(e) =>
+                            setCustomColors({ ...customColors, accent: e.target.value })
+                          }
+                          placeholder="#ec4899"
+                          className="w-32 font-mono text-sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1">
+                      <Label htmlFor="tertiary-color" className="text-sm font-medium mb-2 block">
+                        Tertiary Color
+                      </Label>
+                      <p className="text-xs text-muted-foreground mb-2">Additional accent for variety</p>
+                      <div className="flex items-center gap-3">
+                        <input
+                          id="tertiary-color"
+                          type="color"
+                          value={customColors.tertiary}
+                          onChange={(e) =>
+                            setCustomColors({ ...customColors, tertiary: e.target.value })
+                          }
+                          className="w-12 h-12 rounded-xl cursor-pointer border-2 border-border"
+                        />
+                        <Input
+                          value={customColors.tertiary}
+                          onChange={(e) =>
+                            setCustomColors({ ...customColors, tertiary: e.target.value })
+                          }
+                          placeholder="#06b6d4"
+                          className="w-32 font-mono text-sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Preview */}
+                <div className="p-4 rounded-xl border border-border bg-muted/30">
+                  <p className="text-sm font-medium mb-3">Preview</p>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <div
+                      className="px-4 py-2 rounded-lg text-white text-sm font-medium"
+                      style={{ backgroundColor: customColors.primary }}
+                    >
+                      Primary Button
+                    </div>
+                    <div
+                      className="px-4 py-2 rounded-lg text-white text-sm font-medium"
+                      style={{ backgroundColor: customColors.accent }}
+                    >
+                      Accent Button
+                    </div>
+                    <div
+                      className="px-4 py-2 rounded-lg text-white text-sm font-medium"
+                      style={{ backgroundColor: customColors.tertiary }}
+                    >
+                      Tertiary Button
+                    </div>
+                    <div
+                      className="px-4 py-2 rounded-lg text-white text-sm font-medium"
+                      style={{
+                        background: `linear-gradient(135deg, ${customColors.primary}, ${customColors.accent})`,
+                      }}
+                    >
+                      Gradient
+                    </div>
+                  </div>
+                </div>
+
+                {/* Reset Button */}
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    setCustomColors({
+                      primary: "#9333ea",
+                      accent: "#ec4899",
+                      tertiary: "#06b6d4",
+                      isDark: true,
+                    })
+                  }
+                  className="w-full"
+                >
+                  Reset to Default Colors
+                </Button>
+              </div>
+            </motion.section>
+          )}
 
           {/* Account Section - Only show if logged in */}
           {user && (
