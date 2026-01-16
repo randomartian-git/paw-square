@@ -45,7 +45,7 @@ const PetCard = ({ pet, index }: { pet: Pet; index: number }) => {
     <motion.div
       ref={cardRef}
       initial={{ opacity: 0, x: dir.x, y: dir.y, rotate: index % 2 === 0 ? -5 : 5 }}
-      animate={isInView ? { opacity: 1, x: 0, y: 0, rotate: 0 } : {}}
+      animate={isInView ? { opacity: 1, x: 0, y: 0, rotate: 0 } : { opacity: 1, x: 0, y: 0, rotate: 0 }}
       transition={{ duration: 0.7, delay: index * 0.12, type: "spring", stiffness: 80 }}
       whileHover={{ y: -15, scale: 1.03, rotate: 0 }}
       onClick={() => navigate(`/pet/${pet.id}`)}
@@ -234,13 +234,13 @@ const PetSpotlights = () => {
       <div className="container mx-auto px-4 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           className="text-center mb-12"
         >
           <motion.div 
             initial={{ opacity: 0, scale: 0.8 }}
-            animate={isInView ? { opacity: 1, scale: 1 } : {}}
+            animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, delay: 0.1 }}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-quaternary/20 to-accent/20 text-foreground text-sm font-medium mb-4 border border-quaternary/30"
           >

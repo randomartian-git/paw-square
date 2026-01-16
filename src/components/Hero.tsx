@@ -27,7 +27,7 @@ const Hero = () => {
   ];
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
+    <section className="relative min-h-[85vh] md:min-h-[80vh] flex items-center justify-center overflow-hidden pt-16">
       {/* Static background orbs */}
       {orbs.map((orb, index) => (
         <div
@@ -62,7 +62,7 @@ const Hero = () => {
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-4xl mx-auto text-center">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-primary/20 to-accent/20 text-foreground text-sm font-medium mb-8 border border-primary/30 backdrop-blur-sm">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-primary/20 to-accent/20 text-foreground text-sm font-medium mb-6 border border-primary/30 backdrop-blur-sm">
             <Sparkles className="w-4 h-4 text-primary" />
             The Digital Town Square for Pet Parents
           </div>
@@ -76,7 +76,7 @@ const Hero = () => {
           </h1>
 
           {/* Subtitle */}
-          <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
+          <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
             Join thousands of pet parents in a warm, supportive community. 
             Share stories, get advice, and celebrate the joy of pet ownership together.
           </p>
@@ -94,7 +94,7 @@ const Hero = () => {
           </div>
 
           {/* Stats */}
-          <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-12 mt-16">
+          <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-12 mt-12">
             {[
               { icon: Users, value: "12K+", label: "Pet Parents", color: "bg-primary/20", iconColor: "text-primary", glow: "shadow-glow" },
               { icon: Heart, value: "45K+", label: "Happy Moments", color: "bg-accent/20", iconColor: "text-accent", glow: "shadow-glow-accent" },
