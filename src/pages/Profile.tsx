@@ -736,7 +736,7 @@ const Profile = () => {
                         </Badge>
                       ))}
                     {customFlair && (
-                      <Badge className="bg-gradient-to-r from-primary/20 to-accent/20 text-primary">
+                      <Badge className="bg-gradient-to-r from-primary to-accent text-white">
                         <Award className="w-3 h-3 mr-1" />
                         {customFlair}
                       </Badge>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, useInView } from "framer-motion";
 import { 
-  Heart, MessageCircle, Bookmark, Share2, 
+  MessageCircle, Bookmark, Share2, 
   TrendingUp, Clock, Dog, Cat, Bird, Fish, Rabbit,
   Plus, Search, Sparkles, ChevronUp, HelpCircle,
   MessageSquare, Lightbulb, Image
@@ -16,6 +16,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import LikeButton from "@/components/LikeButton";
+import UserSearchPopover from "@/components/UserSearchPopover";
 import { formatDistanceToNow } from "date-fns";
 
 type Post = {
@@ -318,7 +320,7 @@ const Community = () => {
               className="md:w-72 lg:w-80 shrink-0"
             >
               <div className="sticky top-24 space-y-6">
-                {/* Search */}
+                {/* Search Posts */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <Input
@@ -328,6 +330,9 @@ const Community = () => {
                     className="pl-11"
                   />
                 </div>
+
+                {/* Search Users */}
+                <UserSearchPopover />
 
                 {/* Create Post Button - Desktop */}
                 <Button
@@ -572,19 +577,14 @@ const PostCard = ({ post, index, isLiked, isBookmarked, onLike, onBookmark }: Po
       <div className="flex gap-4">
         {/* Vote Section */}
         <div className="hidden sm:flex flex-col items-center gap-1">
-          <button 
-            onClick={(e) => { e.stopPropagation(); onLike(); }}
-            className={`p-2 rounded-lg transition-all duration-200 ${
-              isLiked 
-                ? "bg-accent/20 text-accent" 
-                : "hover:bg-muted text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Heart className={`w-5 h-5 ${isLiked ? "fill-current" : ""}`} />
-          </button>
-          <span className={`font-bold ${isLiked ? "text-accent" : "text-muted-foreground"}`}>
-            {post.likes_count}
-          </span>
+          <LikeButton
+            isLiked={isLiked}
+            likesCount={post.likes_count}
+            onLike={onLike}
+            showCount={true}
+            size="md"
+            className="p-2 rounded-lg"
+          />
         </div>
 
         {/* Content */}
